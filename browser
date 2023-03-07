@@ -5,13 +5,13 @@
 *.googlevideo.com
 *.balena.io
 *.ytimg.com
-*facebook.com
+*.facebook.com
 *.fbcdn.net
 *.youneed.win
-*openvpn.net
+*.openvpn.net
 *.t66y.com
 *.t.me
-*telegram.org
+*.telegram.org
 *.tdesktop.com
 *.proxifier.com
 *.discord.gg
