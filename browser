@@ -1,3 +1,6 @@
+
+*.googleapis.com
+*.firebaseapp.com
 *.poe.com
 *.anthropic.com
 *.googlesyndication.com
