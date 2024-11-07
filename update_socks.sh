@@ -18,6 +18,7 @@ do
                socks_line="${socks_line}#${item_ip}-${item_port}-${item_cn}"
        fi;
     done;
+if [ "${socks_line}" != "" ];then
   echo "socks5://${socks_line}" >> socks5_list;
-
+fi
 done
