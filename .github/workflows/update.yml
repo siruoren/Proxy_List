@@ -6,7 +6,7 @@ on:
   schedule:
     - cron: '0 1 * * *'
   push:
-    branches: [ "Files" ]
+    branches: [ "main" ]
 
 env:
   TZ: Asia/Shanghai
@@ -24,7 +24,7 @@ jobs:
 
     - name: Update
       run: |
-        # 央视源
+
         rm -f socks.json && wget https://raw.githubusercontent.com/hookzof/socks5_list/master/tg/socks.json -O socks.json
         chmod +x update_socks.sh
         ./update_socks.sh
@@ -44,8 +44,7 @@ jobs:
         git checkout --orphan latest_branch
         git add -A
         git commit -am "${{ steps.date.outputs.date }}"
-        git branch -D Files
-        git branch -m Files
+
 
     - name: Push
-      run: git push -f origin Files
+      run: git push -f origin main
