@@ -1,6 +1,6 @@
 #!/bin/bash
 >socks5_list 
-for line in `awk -F '\{' '{for(i=1;i<=NF;i++) print$i}' socks.json `
+for line in `awk -F '{' '{for(i=1;i<=NF;i++) print$i}' socks.json `
 do
   socks_line=""
   for item in `echo ${line}|awk -F','  '{for(i=1;i<=NF;i++) print$i}'|sed 's/\[//g'|sed 's/\]//g'|grep -vE '}|{'`
