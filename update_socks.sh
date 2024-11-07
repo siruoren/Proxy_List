@@ -15,7 +15,7 @@ do
       fi
       if [ `echo "${item}"|grep "country"` ];then
                item_cn=`echo ${item}|awk -F':' '{print$2}'|sed 's/"//g'`;
-               socks_line="${socks_line}#${item_ip}-${item_cn}"
+               socks_line="${socks_line}#${item_ip}-${item_port}-${item_cn}"
        fi;
     done;
   echo "socks5://${socks_line}" >> socks5_list;
