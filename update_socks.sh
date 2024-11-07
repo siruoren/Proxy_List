@@ -1,5 +1,5 @@
 #!/bin/bash
->socks5_list 
+>other_list 
 for line in `awk -F '{' '{for(i=1;i<=NF;i++) print$i}' socks.json `
 do
   socks_line=""
@@ -19,6 +19,6 @@ do
        fi;
     done;
 if [ "${socks_line}" != "" ];then
-  echo "socks5://${socks_line}" >> socks5_list;
+  echo "socks5://${socks_line}" >> other_list;
 fi
 done
