@@ -23,16 +23,10 @@ if [ "${socks_line}" != "" ];then
 fi
 done
 
-present_list=`cat proxy.txt`
+> proxy.txt
 
 for file in `ls proxy_list`
 do
-  cat proxy_list/${file}|while read line
-  do
-    if [ `cat proxy.txt |grep \"${line}\" ` ];then
-      echo "$line is present,skip......"
-    else
-      echo "$line" >> proxy.txt
-    fi
-  done
+  cat proxy_list/${file} >> proxy.txt
+
 done
