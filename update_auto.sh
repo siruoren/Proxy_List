@@ -25,8 +25,8 @@ done
 
 > proxy.txt
 
-for file in `ls proxy_list`
+for file in `find proxy_list/* -type f`
 do
-  cat proxy_list/${file} >> proxy.txt
+  cat ${file} >> proxy.txt
 
 done
