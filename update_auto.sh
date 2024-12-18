@@ -1,5 +1,5 @@
 #!/bin/bash
->other_list.txt
+>tg_list.txt
 for line in `awk -F '{' '{for(i=1;i<=NF;i++) print$i}' socks.json `
 do
   socks_line=""
@@ -19,7 +19,7 @@ do
        fi;
     done;
 if [ "${socks_line}" != "" ];then
-  echo "socks5://${socks_line}" >> other_list;
+  echo "socks5://${socks_line}" >> tg_list.txt;
 fi
 done
 
@@ -27,7 +27,7 @@ present_list=`cat proxy.txt`
 
 for file in `ls proxy_list`
 do
-  cat ${file}|while read line
+  cat proxy_list/${file}|while read line
   do
     if [ `cat proxy.txt |grep \"${line}\" ` ];then
       echo "$line is present,skip......"
