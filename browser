@@ -41,3 +41,5 @@
 chatgpt.com
 *.tunsafe.com
 *.wireguard.com
+*.docker.com
+*.docker.io
