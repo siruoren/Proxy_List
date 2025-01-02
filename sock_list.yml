@@ -1,5 +1,6 @@
 server:
   socks5:
+     addr: ":18081" 
 backends:
   - addr: 51.75.126.150:37863
     check_config:
