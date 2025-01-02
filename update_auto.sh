@@ -17,7 +17,7 @@ do
                echo "    check_config:" >> sock_list.ymltmp
                echo "      check_url: ${check_url}" >> sock_list.ymltmp
                echo "      initial_alive: true" >> sock_list.ymltmp
-               echo "      timeout: 3" >> sock_list.ymltmp
+               echo "      timeout: 1" >> sock_list.ymltmp
                echo "" >>  sock_list.ymltmp
       fi
 
