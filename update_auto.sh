@@ -29,7 +29,7 @@ done
 echo "server:" >>sock_list.yml
 
 echo "  socks5:">>sock_list.yml
-echo "     addr: \"18081\" " >>sock_list.yml
+echo "     addr: \":18081\" " >>sock_list.yml
 
 echo "backends:">>sock_list.yml
 cat sock_list.ymltmp >> sock_list.yml
