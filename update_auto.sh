@@ -1,7 +1,7 @@
 #!/bin/bash
 ## tg proxy
 check_url='https://telegram.org'
->tg_list.txt
+>sock_list.yml
 for line in `awk -F '{' '{for(i=1;i<=NF;i++) print$i}' socks.json `
 do
   socks_line=""
@@ -13,12 +13,12 @@ do
       fi
       if [ `echo "${item}"|grep "port"` ];then
                item_port=`echo ${item}|awk -F':' '{print$2}'|sed 's/"//g'`
-               echo "  - addr: ${item_ip}:${item_port}" >> tg_list.txttmp
-               echo "    check_config:" >> tg_list.txttmp
-               echo "      check_url: ${check_url}" >> tg_list.txttmp
-               echo "      initial_alive: true" >> tg_list.txttmp
-               echo "      timeout: 3" >> tg_list.txttmp
-               echo "" >>  tg_list.txttmp
+               echo "  - addr: ${item_ip}:${item_port}" >> sock_list.ymltmp
+               echo "    check_config:" >> sock_list.ymltmp
+               echo "      check_url: ${check_url}" >> sock_list.ymltmp
+               echo "      initial_alive: true" >> sock_list.ymltmp
+               echo "      timeout: 3" >> sock_list.ymltmp
+               echo "" >>  sock_list.ymltmp
       fi
 
     done;
@@ -26,14 +26,14 @@ do
 done
 
 #server config
-echo "server:" >>tg_list.txt
+echo "server:" >>sock_list.yml
 
-echo "  socks5:">>tg_list.txt
-echo"     addr: \":18081\" " >>tg_list.txt
+echo "  socks5:">>sock_list.yml
+echo"     addr: \":18081\" " >>sock_list.yml
 
-echo "backends:">>tg_list.txt
-cat tg_list.txttmp >> tg_list.txt
-rm -f tg_list.txttmp
+echo "backends:">>sock_list.yml
+cat sock_list.ymltmp >> sock_list.yml
+rm -f sock_list.ymltmp
 
 
 
