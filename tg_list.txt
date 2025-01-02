@@ -1,50 +1,303 @@
-socks5://213.35.126.218:7868#213.35.126.218-7868-SG
-socks5://34.124.190.108:8080#34.124.190.108-8080-SG
-socks5://51.75.126.150:62889#51.75.126.150-62889-FR
-socks5://135.148.32.193:54198#135.148.32.193-54198-US
-socks5://140.245.115.151:8080#140.245.115.151-8080-SG
-socks5://51.79.248.208:46923#51.79.248.208-46923-SG
-socks5://51.210.111.216:22302#51.210.111.216-22302-FR
-socks5://51.75.126.150:13960#51.75.126.150-13960-FR
-socks5://198.12.249.249:59709#198.12.249.249-59709-US
-socks5://98.152.200.61:8081#98.152.200.61-8081-US
-socks5://140.245.115.151:1080#140.245.115.151-1080-SG
-socks5://68.178.171.226:62934#68.178.171.226-62934-US
-socks5://198.12.249.249:36988#198.12.249.249-36988-US
-socks5://51.75.126.150:27656#51.75.126.150-27656-FR
-socks5://34.124.190.108:8080#34.124.190.108-8080-SG
-socks5://188.166.234.144:8577#188.166.234.144-8577-SG
-socks5://135.148.32.193:54198#135.148.32.193-54198-US
-socks5://51.79.248.208:46923#51.79.248.208-46923-SG
-socks5://140.245.115.151:6080#140.245.115.151-6080-SG
-socks5://140.245.115.151:8080#140.245.115.151-8080-SG
-socks5://198.12.249.249:59709#198.12.249.249-59709-US
-socks5://68.178.171.226:62934#68.178.171.226-62934-US
-socks5://98.152.200.61:8081#98.152.200.61-8081-US
-socks5://141.94.106.171:22817#141.94.106.171-22817-FR
-socks5://162.19.107.54:50975#162.19.107.54-50975-FR
-socks5://198.12.249.249:36988#198.12.249.249-36988-US
-socks5://98.152.200.61:8081#98.152.200.61-8081-US
-socks5://51.75.126.150:19366#51.75.126.150-19366-FR
-socks5://162.19.107.54:39238#162.19.107.54-39238-FR
-socks5://51.75.126.150:54612#51.75.126.150-54612-FR
-socks5://51.75.126.150:33177#51.75.126.150-33177-FR
-socks5://140.245.115.151:1080#140.245.115.151-1080-SG
-socks5://198.12.249.249:36988#198.12.249.249-36988-US
-socks5://51.210.111.216:29733#51.210.111.216-29733-FR
-socks5://198.12.249.249:59709#198.12.249.249-59709-US
-socks5://140.245.115.151:8080#140.245.115.151-8080-SG
-socks5://178.254.61.34:32250#178.254.61.34-32250-DE
-socks5://213.35.126.218:7868#213.35.126.218-7868-SG
-socks5://51.38.64.38:17101#51.38.64.38-17101-GB
-socks5://51.210.111.216:29733#51.210.111.216-29733-FR
-socks5://162.19.107.54:53114#162.19.107.54-53114-FR
-socks5://51.75.126.150:54612#51.75.126.150-54612-FR
-socks5://64.227.124.137:6628#64.227.124.137-6628-DE
-socks5://184.168.121.153:20974#184.168.121.153-20974-SG
-socks5://140.245.115.151:1080#140.245.115.151-1080-SG
-socks5://51.210.111.216:43520#51.210.111.216-43520-FR
-socks5://198.12.249.249:59709#198.12.249.249-59709-US
-socks5://162.19.107.54:50975#162.19.107.54-50975-FR
-socks5://51.75.126.150:27656#51.75.126.150-27656-FR
-socks5://140.245.115.151:8080#140.245.115.151-8080-SG
+server:
+  socks5:
+backends:
+  - addr: 51.75.126.150:37863
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 51.79.248.208:25288
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 51.75.121.63:52515
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:21130
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 51.75.126.150:33177
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:44290
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 162.19.107.54:53829
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 135.148.32.193:54198
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 162.19.107.54:39461
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 184.168.121.153:48636
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 51.75.121.63:59049
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 51.210.111.216:29733
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 162.19.107.54:44670
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 184.168.121.153:12475
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 54.37.86.163:15776
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:25482
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 184.168.121.153:4997
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 162.19.107.54:54118
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 162.19.107.54:53114
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 98.152.200.61:8081
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:43470
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 140.245.115.151:1080
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:29489
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:64464
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 51.75.126.150:33177
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 54.37.86.163:15776
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 54.37.86.163:48991
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 188.165.192.99:64004
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 162.19.107.54:55624
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 162.19.107.54:39461
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 51.75.121.63:52515
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 184.168.121.153:1052
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:25482
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:21130
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:18579
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:43470
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:29489
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 51.75.121.63:59049
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 184.168.121.153:49562
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 51.75.126.150:62889
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 184.168.121.153:19715
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 51.79.248.208:25288
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 51.210.111.216:29733
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 162.19.107.54:44670
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 162.19.107.54:53829
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 162.19.107.54:54118
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 98.152.200.61:8081
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:51020
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:44290
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
+  - addr: 46.105.105.223:64464
+    check_config:
+      check_url: https://telegram.org
+      initial_alive: true
+      timeout: 3
+
