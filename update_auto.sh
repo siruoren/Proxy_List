@@ -40,7 +40,12 @@ if [ "${weekday}" == "6" ];then
   > clashnodes.txt
 fi;
 
-curl -k https://clashgithub.com/wp-content/uploads/rss/${nowdate}.txt >> clashnodes.txt
+cat clashnodes.txt > clashnodes.txttmp
+curl -k https://clashgithub.com/wp-content/uploads/rss/${nowdate}.txt >> clashnodes.txttmp
+
+cat clashnodes.txttmp|sort -r |uniq > clashnodes.txt
+
+rm -f clashnodes.txttmp;
 
 
 
