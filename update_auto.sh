@@ -30,3 +30,18 @@ do
   cat ${file} >> proxy.txt
 
 done
+
+
+
+nowdate=`date +%Y%m%d`
+weekday=`date +%w`
+
+if [ "${weekday}" == "6" ];then
+  > clashnodes.txt
+fi;
+
+curl -k https://clashgithub.com/wp-content/uploads/rss/${nowdate}.txt >> clashnodes.txt
+
+
+
+  
