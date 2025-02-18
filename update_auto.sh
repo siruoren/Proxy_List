@@ -37,7 +37,7 @@ nowdate=`date +%Y%m%d`
 weekday=`date +%w`
 
 
-if [ `curl -s -k https://clashgithub.com/clashnode-${nowdate}.html|grep 'title'|grep -v '='|grep 404|wc -l` -ne '0' ];then
+if [ `curl -s https://clashgithub.com/clashnode-${nowdate}.html|grep -iE "vmess://|ss://"|grep -v "<"|wc -l` -eq '0' ];then
    echo "remote rss error,skip update!!!"
 
 else
