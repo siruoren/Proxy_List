@@ -43,6 +43,7 @@ fi;
 cat clashnodes.txt > clashnodes.txttmp
 curl -k https://clashgithub.com/wp-content/uploads/rss/${nowdate}.txt >> clashnodes.txttmp
 
+sed -i '/^</d' clashnodes.txttmp
 cat clashnodes.txttmp|sort -r |uniq > clashnodes.txt
 
 rm -f clashnodes.txttmp;
