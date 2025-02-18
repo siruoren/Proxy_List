@@ -36,18 +36,24 @@ done
 nowdate=`date +%Y%m%d`
 weekday=`date +%w`
 
-if [ "${weekday}" == "6" ];then
-  > clashnodes.txt
+
+if [ `curl -k https://clashgithub.com/wp-content/uploads/rss/${nowdate}.txt|grep '<head><title>404'` ];then
+   echo "remote rss error,skip update!!!"
+
+else
+
+  if [ "${weekday}" == "6" ];then
+    > clashnodes.txt
+  fi;
+
+  cat clashnodes.txt > clashnodes.txttmp
+  curl -k https://clashgithub.com/wp-content/uploads/rss/${nowdate}.txt >> clashnodes.txttmp
+
+  sed -i '/^</d' clashnodes.txttmp
+  cat clashnodes.txttmp|sort -r |uniq > clashnodes.txt
+
+  rm -f clashnodes.txttmp;
+
 fi;
-
-cat clashnodes.txt > clashnodes.txttmp
-curl -k https://clashgithub.com/wp-content/uploads/rss/${nowdate}.txt >> clashnodes.txttmp
-
-sed -i '/^</d' clashnodes.txttmp
-cat clashnodes.txttmp|sort -r |uniq > clashnodes.txt
-
-rm -f clashnodes.txttmp;
-
-
 
   
