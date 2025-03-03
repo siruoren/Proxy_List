@@ -16,7 +16,9 @@ if [ `curl -L -k ${yesterday_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l`
     echo "remote banyunxiaoxi rss error,skip update!!!"
 
 else
-
+  if [ "${weekday}" == "6" ];then
+    > clashnodes.txt
+  fi;
 
   cat clashnodes.txt > clashnodes.txttmp
   curl ${yesterday_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
