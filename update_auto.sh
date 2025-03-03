@@ -60,7 +60,7 @@ fi;
 #from banyunxiaoxi.icu
 yesterday=`date -d"yesterday" +%F`
 echo $yesterday
-
+curl -v https://banyunxiaoxi.icu
 yesterday_url=`curl https://banyunxiaoxi.icu|grep ${yesterday}|grep 'href'|awk -F'href=' '{print$2}'|awk -F'>' '{print$1}'|grep -v 'category'|sed 's/"//g'|sort|uniq|tail -1`
 
 echo "yesterday_url:${yesterday_url}";
