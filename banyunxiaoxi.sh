@@ -20,9 +20,9 @@ else
   if [ "${weekday}" == "6" ];then
     > banyunxiaoxi.txt
   fi;
-
-  curl ${yesterday_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq > banyunxiaoxi.txttmp
-  cat  banyunxiaoxi.txttmp|sort|uniq >> banyunxiaoxi.txt
+  cat banyunxiaoxi.txt > banyunxiaoxi.txttmp
+  curl ${yesterday_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> banyunxiaoxi.txttmp
+  cat  banyunxiaoxi.txttmp|sort|uniq > banyunxiaoxi.txt
   rm -f banyunxiaoxi.txttmp;
 
 
