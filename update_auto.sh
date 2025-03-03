@@ -59,9 +59,9 @@ fi;
 
 #from banyunxiaoxi.icu
 yesterday=`date -d"yesterday" +%F`
-yesterday_url=`curl https://banyunxiaoxi.icu|grep ${yesterday}|grep 'href'|awk -F'href=' '{print$2}'|awk -F'>' '{print$1}'|grep -v 'category'|sort|uniq|tail -1`
+yesterday_url=`curl https://banyunxiaoxi.icu|grep ${yesterday}|grep 'href'|awk -F'href=' '{print$2}'|awk -F'>' '{print$1}'|grep -v 'category'|sed 's/"//g'|sort|uniq|tail -1`
 
-
+echo ${yesterday_url};
 if [ `curl ${yesterday_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -eq '0' ];then
     echo "remote banyunxiaoxi rss error,skip update!!!"
 

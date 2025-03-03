@@ -27,7 +27,7 @@ jobs:
 
         rm -f socks.json && wget https://raw.githubusercontent.com/hookzof/socks5_list/master/tg/socks.json -O socks.json
         chmod +x update_auto.sh
-        ./update_auto.sh
+        bash +vvv ./update_auto.sh
         rm -f socks.json
 
         
