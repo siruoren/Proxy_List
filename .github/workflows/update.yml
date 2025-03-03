@@ -13,7 +13,7 @@ env:
 
 jobs:
   Update:
-    runs-on: debian-latest
+    runs-on: ubuntu-22.04
     steps:
     - name: Checkout
       uses: actions/checkout@v3
