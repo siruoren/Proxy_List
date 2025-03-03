@@ -17,13 +17,11 @@ if [ `curl -L -k ${yesterday_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l`
 
 else
 
-  if [ "${weekday}" == "6" ];then
-    > banyunxiaoxi.txt
-  fi;
-  cat banyunxiaoxi.txt > banyunxiaoxi.txttmp
-  curl ${yesterday_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> banyunxiaoxi.txttmp
-  cat  banyunxiaoxi.txttmp|sort|uniq > banyunxiaoxi.txt
-  rm -f banyunxiaoxi.txttmp;
+
+  cat clashnodes.txt > clashnodes.txttmp
+  curl ${yesterday_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
+  cat  clashnodes.txttmp|sort|uniq > clashnodes.txt
+  rm -f clashnodes.txttmp;
 
 
 
