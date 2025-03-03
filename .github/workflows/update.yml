@@ -13,7 +13,7 @@ env:
 
 jobs:
   Update:
-    runs-on: ubuntu-latest
+    runs-on: debian-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -29,6 +29,8 @@ jobs:
         chmod +x update_auto.sh
         bash +vvv ./update_auto.sh
         rm -f socks.json
+
+        bash +vvv ./banyunxiaoxi.sh
 
         
 
