@@ -25,11 +25,7 @@ else
   cat  banyunxiaoxi.txttmp|sort|uniq >> banyunxiaoxi.txt
   rm -f banyunxiaoxi.txttmp;
 
-  git config --local user.email "actions@github.com"
-  git config --local user.name "GitHub Actions"
-  git add -A
-  git commit -am "${yesterday_url}"
-  git push
+
 
 fi;
 
