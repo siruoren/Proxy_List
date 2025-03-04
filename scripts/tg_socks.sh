@@ -1,5 +1,8 @@
 #!/bin/bash
->tg_list.txt
+cd $(dirname $0);
+> ../tg_list.txt
+rm -f socks.json && wget https://raw.githubusercontent.com/hookzof/socks5_list/master/tg/socks.json -O socks.json
+
 for line in `awk -F '{' '{for(i=1;i<=NF;i++) print$i}' socks.json `
 do
   socks_line=""
@@ -19,41 +22,12 @@ do
        fi;
     done;
 if [ "${socks_line}" != "" ];then
-  echo "socks5://${socks_line}" >> tg_list.txt;
+  echo "socks5://${socks_line}" >> ../tg_list.txt;
 fi
 done
-
-> proxy.txt
-
-for file in `find proxy_list/* -type f`
-do
-  cat ${file} >> proxy.txt
-
-done
+rm -f socks.json;
 
 
 
-nowdate=`date +%Y%m%d`
-weekday=`date +%w`
-
-
-if [ `curl -s https://clashgithub.com/clashnode-${nowdate}.html|grep -iE "vmess://|ss://"|grep -v "<"|wc -l` -eq '0' ];then
-   echo "remote clashnodes rss error,skip update!!!"
-
-else
-
-  if [ "${weekday}" == "6" ];then
-    > clashnodes.txt
-  fi;
-
-  cat clashnodes.txt > clashnodes.txttmp
-  curl -k curl -s https://clashgithub.com/clashnode-${nowdate}.html|grep -iE "vmess://|ss://"|grep -v "<" >> clashnodes.txttmp
-
-  sed -i '/^</d' clashnodes.txttmp
-  cat clashnodes.txttmp|sort -r |uniq > clashnodes.txt
-
-  rm -f clashnodes.txttmp;
-
-fi;
 
 

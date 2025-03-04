@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
+cd $(dirname $0);
 nowdate=`date +%Y%m%d`
 weekday=`date +%w`
 
@@ -17,12 +17,12 @@ if [ `curl -L -k ${yesterday_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l`
 
 else
   if [ "${weekday}" == "6" ];then
-    > clashnodes.txt
+    > ../clashnodes.txt
   fi;
 
   cat clashnodes.txt > clashnodes.txttmp
   curl ${yesterday_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
-  cat  clashnodes.txttmp|sort|uniq > clashnodes.txt
+  cat  clashnodes.txttmp|sort|uniq > ../clashnodes.txt
   rm -f clashnodes.txttmp;
 
 

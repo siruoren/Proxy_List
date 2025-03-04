@@ -25,12 +25,12 @@ jobs:
     - name: Update
       run: |
 
-        rm -f socks.json && wget https://raw.githubusercontent.com/hookzof/socks5_list/master/tg/socks.json -O socks.json
-        chmod +x update_auto.sh
-        bash +vvv ./update_auto.sh
-        rm -f socks.json
+        chmod -R 755 scripts/*;
 
-        bash +vvv ./banyunxiaoxi.sh
+        bash +vvv scripts/proxy_list.sh
+        bash +vvv scripts//tg_socks.sh
+        bash +vvv scripts/clashnodes.sh
+        bash +vvv scripts/banyunxiaoxi.sh
 
         
 
