@@ -42,6 +42,8 @@ jobs:
     - name: Clean
       run: |
         echo "Auto Update  at ${{ steps.date.outputs.date }}" > README.md
+        echo "所有数据来源于互联网，内容真实性请用户自行辨认。" >> README.md
+        echo "本源码仅供学习，禁止用于违法犯罪行为，否则后果自负！" >> README.md
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
         git add -A
