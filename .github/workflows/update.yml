@@ -4,7 +4,7 @@ on:
   watch:
     types: [started]
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '0 16 * * *'
   push:
     branches: [ "main" ]
 
@@ -41,6 +41,7 @@ jobs:
 
     - name: Clean
       run: |
+        echo "Auto Update  at ${{ steps.date.outputs.date }}" > README.md
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
         git add -A
