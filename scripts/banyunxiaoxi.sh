@@ -20,7 +20,7 @@ else
     > ../clashnodes.txt
   fi;
 
-  cat clashnodes.txt > clashnodes.txttmp
+  cat ../clashnodes.txt > clashnodes.txttmp
   curl ${yesterday_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
   cat  clashnodes.txttmp|sort|uniq > ../clashnodes.txt
   rm -f clashnodes.txttmp;
