@@ -15,7 +15,7 @@ else
     > ../clashnodes.txt
   fi;
 
-  cat clashnodes.txt > clashnodes.txttmp
+  cat ../clashnodes.txt > clashnodes.txttmp
   curl -k curl -s https://clashgithub.com/clashnode-${nowdate}.html|grep -iE "vmess://|ss://"|grep -v "<" >> clashnodes.txttmp
 
   sed -i '/^</d' clashnodes.txttmp
