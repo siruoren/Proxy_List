@@ -1,6 +1,11 @@
 #!/bin/bash
 cd $(dirname $0);
-> ../tg_list.txt
+weekday=`date +%w`
+
+if [ "${weekday}" == "6" ];then
+  > ../tg_list.txt
+fi;
+
 rm -f socks.json && wget https://raw.githubusercontent.com/hookzof/socks5_list/master/tg/socks.json -O socks.json
 
 for line in `awk -F '{' '{for(i=1;i<=NF;i++) print$i}' socks.json `
