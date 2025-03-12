@@ -5,7 +5,7 @@ weekday=`date +%w`
 if [ "${weekday}" == "6" ];then
   > ../tg_list.txt
 fi;
-
+rm -f tg_list.txttmp;
 rm -f socks.json && wget https://raw.githubusercontent.com/hookzof/socks5_list/master/tg/socks.json -O socks.json
 
 for line in `awk -F '{' '{for(i=1;i<=NF;i++) print$i}' socks.json `
@@ -27,9 +27,11 @@ do
        fi;
     done;
 if [ "${socks_line}" != "" ];then
-  echo "socks5://${socks_line}" >> ../tg_list.txt;
+  echo "socks5://${socks_line}" >> tg_list.txttmp;
 fi
-done
+
+cat tg_list.txttmp|sort|uniq >> ../tg_list.txt
+
 rm -f socks.json;
 
 
