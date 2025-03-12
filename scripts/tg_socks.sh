@@ -32,6 +32,7 @@ fi
 
 cat tg_list.txttmp|sort|uniq >> ../tg_list.txt
 
+rm -f tg_list.txttmp
 rm -f socks.json;
 
 
