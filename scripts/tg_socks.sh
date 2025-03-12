@@ -29,8 +29,8 @@ do
 if [ "${socks_line}" != "" ];then
   echo "socks5://${socks_line}" >> tg_list.txttmp;
 fi
-
-cat tg_list.txttmp|sort|uniq >> ../tg_list.txt
+cat ../tg_list.txt >> tg_list.txttmp
+cat tg_list.txttmp|sort|uniq > ../tg_list.txt
 
 rm -f tg_list.txttmp
 rm -f socks.json;
