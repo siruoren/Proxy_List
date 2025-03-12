@@ -29,6 +29,7 @@ do
 if [ "${socks_line}" != "" ];then
   echo "socks5://${socks_line}" >> tg_list.txttmp;
 fi
+done
 cat ../tg_list.txt >> tg_list.txttmp
 cat tg_list.txttmp|sort|uniq > ../tg_list.txt
 
