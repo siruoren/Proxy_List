@@ -24,13 +24,17 @@ jobs:
 
     - name: Update
       run: |
-
+        echo "# 所有数据来源于互联网，内容真实性请用户自行辨认。" > README.md
+        echo '' >> README.md
+        echo "# 本源码仅供学习，禁止用于违法犯罪行为，否则后果自负！" >> README.md
+        echo '' >> README.md
+        echo "# Auto Update  at ${{ steps.date.outputs.date }}" >> README.md
+        echo '------------------------------------------------' >> README.md
         chmod -R 755 scripts/*;
-
-        bash +vvv scripts/proxy_list.sh
-        bash +vvv scripts//tg_socks.sh
-        bash +vvv scripts/clashnodes.sh
-        bash +vvv scripts/banyunxiaoxi.sh
+        bash +vvv scripts/proxy_list.sh >> README.md
+        bash +vvv scripts//tg_socks.sh >> README.md
+        bash +vvv scripts/clashnodes.sh >> README.md
+        bash +vvv scripts/banyunxiaoxi.sh >> README.md
 
         
 
@@ -41,11 +45,6 @@ jobs:
 
     - name: Clean
       run: |
-        echo "# 所有数据来源于互联网，内容真实性请用户自行辨认。" > README.md
-        echo '' >> README.md
-        echo "# 本源码仅供学习，禁止用于违法犯罪行为，否则后果自负！" >> README.md
-        echo '' >> README.md
-        echo "# Auto Update  at ${{ steps.date.outputs.date }}" >> README.md
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
         git add -A
