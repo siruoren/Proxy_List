@@ -20,6 +20,7 @@ echo ${yesterday_url}
 vmess_url=''
 
 echo "yesterday_url:${yesterday_url}";
+echo "today_url:${today_url}";
 if [ `curl -L -k ${yesterday_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];then
     echo "yesterday content is have vmess !!!"
     vmess_url=${yesterday_url}
