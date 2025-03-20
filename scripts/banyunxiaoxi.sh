@@ -1,7 +1,9 @@
 #!/bin/bash
 
 cd $(dirname $0);
+
 nowdate=`date +%Y%m%d`
+nowdate_path=`date +%Y/%m/%d`
 weekday=`date +%w`
 
 
@@ -9,10 +11,11 @@ weekday=`date +%w`
 today_date=`date  +%F`
 echo "today: $today_date"
 yesterday_date=`date -d"yesterday" +%F`
+yesterday_path=`date -d"yesterday" +%Y/%m/%d`
 echo "yesterday: $yesterday_date"
-today_url=`curl -L -k https://banyunxiaoxi.icu|grep ${today_date}|grep 'href'|awk -F'href=' '{print$2}'|awk -F'>' '{print$1}'|grep -v 'category'|sed 's/"//g'|sort|uniq|tail -1`
+today_url=`curl -L -k https://banyunxiaoxi.icu|grep ${nowdate_path}|grep 'href'|awk -F'href=' '{print$2}'|awk -F'>' '{print$1}'|grep -v 'category'|sed 's/"//g'|sort|uniq|tail -1`
 echo ${today_url}
-yesterday_url=`curl -L -k https://banyunxiaoxi.icu|grep ${yesterday_date}|grep 'href'|awk -F'href=' '{print$2}'|awk -F'>' '{print$1}'|grep -v 'category'|sed 's/"//g'|sort|uniq|tail -1`
+yesterday_url=`curl -L -k https://banyunxiaoxi.icu|grep ${yesterday_path}|grep 'href'|awk -F'href=' '{print$2}'|awk -F'>' '{print$1}'|grep -v 'category'|sed 's/"//g'|sort|uniq|tail -1`
 echo ${yesterday_url}
 vmess_url=''
 
