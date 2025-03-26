@@ -2,29 +2,29 @@
 
 # 本源码仅供学习，禁止用于违法犯罪行为，否则后果自负！
 
-# Auto Update  at 2025-03-25 00:12:25 CST
+# Auto Update  at 2025-03-26 00:09:56 CST
 ------------------------------------------------
---2025-03-25 00:12:25--  https://raw.githubusercontent.com/hookzof/socks5_list/master/tg/socks.json
-Resolving raw.githubusercontent.com (raw.githubusercontent.com)... 185.199.111.133, 185.199.109.133, 185.199.110.133, ...
+--2025-03-26 00:09:56--  https://raw.githubusercontent.com/hookzof/socks5_list/master/tg/socks.json
+Resolving raw.githubusercontent.com (raw.githubusercontent.com)... 185.199.111.133, 185.199.109.133, 185.199.108.133, ...
 Connecting to raw.githubusercontent.com (raw.githubusercontent.com)|185.199.111.133|:443... connected.
 HTTP request sent, awaiting response... 200 OK
-Length: 4193 (4.1K) [text/plain]
+Length: 4234 (4.1K) [text/plain]
 Saving to: ‘socks.json’
 
-     0K ....                                                  100% 45.0M=0s
+     0K ....                                                  100% 42.7M=0s
 
-2025-03-25 00:12:25 (45.0 MB/s) - ‘socks.json’ saved [4193/4193]
+2025-03-26 00:09:56 (42.7 MB/s) - ‘socks.json’ saved [4234/4234]
 
 remote clashnodes rss error,skip update!!!
-today: 2025-03-25
-yesterday: 2025-03-24
+today: 2025-03-26
+yesterday: 2025-03-25
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  6926    0  6926    0     0   100k      0 --:--:-- --:--:-- --:--:--  100k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  6904    0  6904    0     0   126k      0 --:--:-- --:--:-- --:--:--  127k
 
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  6904    0  6904    0     0   208k      0 --:--:-- --:--:-- --:--:--  210k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  6926    0  6926    0     0   242k      0 --:--:-- --:--:-- --:--:--  250k
 
 yesterday_url:
 
