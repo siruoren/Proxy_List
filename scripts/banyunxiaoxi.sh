@@ -25,27 +25,40 @@ echo "today_url:${today_url}";
 echo "";
 if [ `curl -L -k ${yesterday_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];then
     echo "yesterday content is have vmess !!!"
-    vmess_url=${yesterday_url}
-elif [ `curl -L -k ${today_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];then
-    echo "today content is have vmess !!!"
-    vmess_url=${today_url}
+    y_vmess_url=${yesterday_url}
+    if [ "${y_vmess_url}" != '' ];then
 
-else
-    vmess_url=''
+    if [ "${weekday}" == "6" ];then
+      > ../clashnodes.txt
+    fi;
+
+    cat ../clashnodes.txt > clashnodes.txttmp
+    curl ${y_vmess_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
+    cat  clashnodes.txttmp|sort|uniq > ../clashnodes.txt
+    rm -f clashnodes.txttmp;
+
+
+
+    fi;
+fi
+if [ `curl -L -k ${today_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];then
+    echo "today content is have vmess !!!"
+    t_vmess_url=${today_url}
+    if [ "${t_vmess_url}" != '' ];then
+
+    cat ../clashnodes.txt > clashnodes.txttmp
+    curl ${t_vmess_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
+    cat  clashnodes.txttmp|sort|uniq > ../clashnodes.txt
+    rm -f clashnodes.txttmp;
+
+
+
+    fi;
 fi
 
 
-if [ "${vmess_url}" != '' ];then
-
-    > ../clashnodes.txt
-
-  curl ${vmess_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
-  cat  clashnodes.txttmp|sort|uniq > ../clashnodes.txt
-  rm -f clashnodes.txttmp;
 
 
-
-fi;
 
 
 
