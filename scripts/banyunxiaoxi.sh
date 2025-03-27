@@ -36,11 +36,9 @@ fi
 
 
 if [ "${vmess_url}" != '' ];then
-  if [ "${weekday}" == "6" ];then
-    > ../clashnodes.txt
-  fi;
 
-  cat ../clashnodes.txt > clashnodes.txttmp
+    > ../clashnodes.txt
+
   curl ${vmess_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
   cat  clashnodes.txttmp|sort|uniq > ../clashnodes.txt
   rm -f clashnodes.txttmp;
