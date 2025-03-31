@@ -31,10 +31,10 @@ jobs:
         echo "# Auto Update  at ${{ steps.date.outputs.date }}" >> README.md
         echo '------------------------------------------------' >> README.md
         chmod -R 755 scripts/*;
-        bash +vvv scripts/proxy_list.sh >> README.md 2>&1
+        #bash +vvv scripts/proxy_list.sh >> README.md 2>&1
         bash +vvv scripts//tg_socks.sh >> README.md 2>&1
-        bash +vvv scripts/clashnodes.sh >> README.md 2>&1
-        bash +vvv scripts/banyunxiaoxi.sh >> README.md 2>&1
+        #bash +vvv scripts/clashnodes.sh >> README.md 2>&1
+        #bash +vvv scripts/banyunxiaoxi.sh >> README.md 2>&1
 
         
 
