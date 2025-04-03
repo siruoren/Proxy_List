@@ -36,11 +36,11 @@ cat tg_list.txttmp|sort|uniq > ../tg_list.txt
 rm -f tg_list.txttmp
 rm -f socks.json;
 
-rm -f socks5.json && wget https://raw.githubusercontent.com/SoliSpirit/proxy-list/refs/heads/main/socks5.txt -O socks5.json
+# rm -f socks5.json && wget https://raw.githubusercontent.com/SoliSpirit/proxy-list/refs/heads/main/socks5.txt -O socks5.json
 
-for line in `cat socks5.json`;do
-  echo "socks5://${line}#${line}" >> tg_list.txttmp;
-done
+# for line in `cat socks5.json`;do
+#   echo "socks5://${line}#${line}" >> tg_list.txttmp;
+# done
 
-cat ../tg_list.txt >> tg_list.txttmp
-cat tg_list.txttmp|sort|uniq > ../tg_list.txt
+# cat ../tg_list.txt >> tg_list.txttmp
+# cat tg_list.txttmp|sort|uniq > ../tg_list.txt
