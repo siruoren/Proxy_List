@@ -34,7 +34,7 @@ jobs:
         #bash +vvv scripts/proxy_list.sh >> README.md 2>&1
         bash +vvv scripts//tg_socks.sh >> README.md 2>&1
         #bash +vvv scripts/clashnodes.sh >> README.md 2>&1
-        #bash +vvv scripts/banyunxiaoxi.sh >> README.md 2>&1
+        bash +vvv scripts/banyunxiaoxi.sh >> README.md 2>&1
 
         
 
