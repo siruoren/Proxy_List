@@ -52,7 +52,7 @@ EOF
 
 
 while read line|| [ -n ${line}]; do
-    if [ ${line} =~ "vmess:"];then
+    if [ "${line}" =~ "vmess:" ];then
         # 输入你的 vmess 链接
         VMESS_LINK="$line"
 
