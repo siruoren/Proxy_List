@@ -42,7 +42,7 @@ function vmess_test {
         }
     }]
     }
-    EOF
+EOF
 
     # 4. 测试延迟
     v2ray -test -config config.json
