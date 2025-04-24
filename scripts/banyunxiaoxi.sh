@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e;
 cd $(dirname $0);
 
 nowdate=`date +%Y%m%d`
