@@ -1,5 +1,6 @@
 #!/bin/bash
 cd $(dirname $0);
+echo $(uname);
 sudo apt-get  install jq -y
 sudo cp v2ray /usr/bin/v2ray; sudo chmod +x /usr/bin/v2ray;
 v2ray version
