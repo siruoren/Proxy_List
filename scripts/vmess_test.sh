@@ -64,4 +64,5 @@ while read line|| [ -n ${line}]; do
         fi
         sed "s/^ /d" ../clashnodes.txt
     fi
+    break
 done < ../clashnodes.txt
