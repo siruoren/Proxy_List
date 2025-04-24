@@ -1,0 +1,50 @@
+    {
+    "inbounds": [{
+        "port": 1080,
+        "listen": "127.0.0.1",
+        "protocol": "socks",
+        "settings": {
+        "auth": "noauth",
+        "udp": true
+        }
+    }],
+    "outbounds": [{
+        "protocol": "vmess",
+        "settings": {
+        "vnext": [{
+            "address": "",
+            "port": ,
+            "users": [{
+            "id": "",
+            "alterId": ,
+            "security": "auto"
+            }]
+        }]
+        },
+        "streamSettings": {
+        "network": "",
+        "security": ""
+        }
+    }]
+    }
+    EOF
+
+    # 4. 测试延迟
+    v2ray -test -config config.json
+}
+
+
+
+while read line|| [ -n ]; do
+    if [  =~ "vmess:"];then
+        # 输入你的 vmess 链接
+        VMESS_LINK=""
+
+        # 测试延迟
+        res=
+        if [ !  =~ "ms" ];then
+            sed -i "s///g" ../clashnodes.txt
+        fi
+        sed "s/^ /d" ../clashnodes.txt
+    fi
+done < ../clashnodes.txt
