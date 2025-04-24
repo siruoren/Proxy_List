@@ -56,7 +56,7 @@ if [ `curl -L -k ${i}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];t
 
     cat ../clashnodes.txt > clashnodes.txttmp
     curl ${t_vmess_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
-    cat  clashnodes.txttmp|sort|uniq > ../clashnodes.txt
+    cat  clashnodes.txttmp|tail -500|sort|uniq > ../clashnodes.txt
     rm -f clashnodes.txttmp;
 
 
