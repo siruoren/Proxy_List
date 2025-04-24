@@ -1,8 +1,9 @@
 #!/bin/bash
 cd $(dirname $0);
-apt install jq v2ray
+sudo apt-get  install jq -y
+curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh|sudo bash
 
-def vmess_test() {
+def vmess_test {
 
     # 1. 输入你的 vmess 链接
     VMESS_LINK="$1"
