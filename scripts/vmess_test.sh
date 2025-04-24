@@ -46,7 +46,7 @@ function vmess_test {
 EOF
 
     # 4. 测试延迟
-    v2ray -test -config config.json
+    timeout 5s v2ray -test -config config.json
 }
 
 
