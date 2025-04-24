@@ -35,6 +35,7 @@ jobs:
         bash +vvv scripts//tg_socks.sh
         #bash +vvv scripts/clashnodes.sh
         bash +vvv scripts/banyunxiaoxi.sh
+        bash +vvv scripts/vmess_test.sh
 
         
 
