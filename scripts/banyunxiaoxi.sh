@@ -39,7 +39,13 @@ if [ `curl -L -k ${i}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];t
 
     cat ../clashnodes.txt > clashnodes.txttmp
     curl ${y_vmess_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
-    cat  clashnodes.txttmp|sort|uniq > ../clashnodes.txt
+while read line || [ -n $line ]
+    do
+        line_content=`echo $line |awk -F'/' '{print$NF}'`
+        if [ `cat ../clashnodes.txt|grep $line_content|wc -l` = 0 ];then
+            echo $line >> ../clashnodes.txt
+        fi
+    done < clashnodes.txttmp;
     rm -f clashnodes.txttmp;
 
 
@@ -62,7 +68,7 @@ if [ `curl -L -k ${i}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];t
         if [ `cat ../clashnodes.txt|grep $line_content|wc -l` = 0 ];then
             echo $line >> ../clashnodes.txt
         fi
-    done
+    done < clashnodes.txttmp;
     rm -f clashnodes.txttmp;
 
 
