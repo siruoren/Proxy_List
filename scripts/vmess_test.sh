@@ -3,6 +3,7 @@ cd $(dirname $0);
 sudo apt-get  install jq -y
 curl -vv -O https://github.com/v2fly/v2ray-core/releases/download/v5.30.0/v2ray-linux-64.zip;
 unzip v2ray-linux-64.zip;sudo cp v2ray /usr/bin/v2ray; sudo chmod +x /usr/bin/v2ray;
+v2ray version
 
 function vmess_test {
 
