@@ -42,7 +42,7 @@ if [ `curl -L -k ${i}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];t
 while read line || [ -n $line ]
     do
         line_content=`echo $line |awk -F'/' '{printf$NF}'`
-       if [ $line_content != '' ];then
+       if [ "$line_content" != '' ];then
        #echo $line_content
         if [ `cat ../clashnodes.txt|grep  $line_content|wc -l` = 0 ];then
             echo $line >> ../clashnodes.txt
@@ -68,7 +68,7 @@ if [ `curl -L -k ${i}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];t
     while read line || [ -n $line ]
     do
         line_content=`echo $line |awk -F'/' '{printf$NF}'`
-        if [ $line_content != '' ];then
+        if [ "$line_content" != '' ];then
         if [ `cat ../clashnodes.txt|grep  $line_content|wc -l` = 0 ];then
             echo $line >> ../clashnodes.txt
         fi
