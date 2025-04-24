@@ -41,6 +41,7 @@ if [ `curl -L -k ${i}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];t
     curl ${y_vmess_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
 while read line || [ -n $line ]
     do
+echo 222 $line
         line_content=`echo $line |awk -F'/' '{printf$NF}'`
        if [ "$line_content" != '' ];then
        echo `date` $line_content
