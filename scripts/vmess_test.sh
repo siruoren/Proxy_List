@@ -1,7 +1,8 @@
 #!/bin/bash
 cd $(dirname $0);
 sudo apt-get  install jq -y
-curl -O https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh|sudo bash
+curl -O https://github.com/v2fly/v2ray-core/releases/download/v5.30.0/v2ray-linux-64.zip;
+unzip v2ray-linux-64.zip;sudo cp v2ray /usr/bin/v2ray; sudo chmod +x /usr/bin/v2ray;
 
 function vmess_test {
 
