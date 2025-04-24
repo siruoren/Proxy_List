@@ -39,7 +39,7 @@ if [ `curl -L -k ${i}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];t
 
     cat ../clashnodes.txt > clashnodes.txttmp
     curl ${y_vmess_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
-while read line || [ -n $line ]
+while read line || [ ! -n $line ]
     do
 echo 222 $line
         line_content=`echo $line |awk -F'/' '{printf$NF}'`
@@ -66,7 +66,7 @@ if [ `curl -L -k ${i}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];t
 
     cat ../clashnodes.txt > clashnodes.txttmp
     curl ${t_vmess_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
-    while read line || [ -n $line ]
+    while read line || [ ! -n $line ]
     do
         line_content=`echo $line |awk -F'/' '{printf$NF}'`
         if [ "$line_content" != '' ];then
