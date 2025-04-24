@@ -23,7 +23,7 @@ echo "yesterday_url:${yesterday_url}";
 echo "";
 echo "today_url:${today_url}";
 echo "";
-
+ > ../clashnodes.txt
 if [ \'${yesterday_url}\' != '' ] || [\' ${today_url}\' != '' ];then
     if [ "${weekday}" == "6" ];then
       > ../clashnodes.txt
@@ -56,7 +56,13 @@ if [ `curl -L -k ${i}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];t
 
     cat ../clashnodes.txt > clashnodes.txttmp
     curl ${t_vmess_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
-    cat  clashnodes.txttmp|tail -500|sort|uniq > ../clashnodes.txt
+    while read line || [ -n $line ]
+    do
+        line_content=`echo $line |awk -F'/' '{print$NF}'`
+        if [ `cat ../clashnodes.txt|grep $line_content|wc -l` = 0 ];then
+            echo $line >> ../clashnodes.txt
+        fi
+    done
     rm -f clashnodes.txttmp;
 
 
