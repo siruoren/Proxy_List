@@ -23,7 +23,7 @@ echo "yesterday_url:${yesterday_url}";
 echo "";
 echo "today_url:${today_url}";
 echo "";
-if [ \'${yesterday_url}\' != '' ] || [\' ${today_url}\' != '' ];then
+if [ \'${yesterday_url}\' != '' ] || [ \' ${today_url}\' != '' ];then
     if [ "${weekday}" == "6" ];then
       > ../clashnodes.txt
     fi;
