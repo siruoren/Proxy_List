@@ -1,10 +1,11 @@
 #!/bin/bash
 cd $(dirname $0);
 weekday=`date +%w`
-
-if [ "${weekday}" == "6" ];then
-  > ../tg_list.txt
-fi;
+if [[ `curl -k -s https://raw.githubusercontent.com/hookzof/socks5_list/master/tg/socks.json` != "" ]];then
+  if [ "${weekday}" == "6" ];then
+    > ../tg_list.txt
+  fi;
+fi
 rm -f tg_list.txttmp;
 rm -f socks.json && wget https://raw.githubusercontent.com/hookzof/socks5_list/master/tg/socks.json -O socks.json
 
