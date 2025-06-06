@@ -39,7 +39,8 @@
 *.sparklabs.com
 *.twitter.com
 *.twimg.com
-chatgpt.com
+*.chatgpt.com
+*.openai.com
 *.tunsafe.com
 *.wireguard.com
 *.docker.com
