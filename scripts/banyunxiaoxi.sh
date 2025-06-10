@@ -65,13 +65,15 @@ if [ `curl -L -k ${i}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];t
 
     cat ../clashnodes.txt > clashnodes.txttmp
     curl ${t_vmess_url}|grep '^vmess'|sed "s/<.*//g"|sort|uniq >> clashnodes.txttmp
-    while read line || [ ! -n $line ]
+    while read line || [ -n $line ];
     do
         line_content=`echo $line |awk -F'/' '{printf$NF}'`
         if [ "$line_content" != '' ];then
         #echo `date` 222 $line_content
         if [ `cat ../clashnodes.txt|grep  $line_content|wc -l` = 0 ];then
-            echo $line >> ../clashnodes.txt
+            if [ `echo "line_content"|base64 -d |awk -F',' '{for(i=1;i<=NF;i++) print$i}'|sed 's/"//g'|grep 'net:'|grep -iE "ws|tcp|tls"` ];then
+                echo $line >> ../clashnodes.txt
+            fi
         fi
 fi
     done < clashnodes.txttmp
