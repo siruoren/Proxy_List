@@ -45,7 +45,12 @@ while read line || [ ! -n $line ]
        if [ "$line_content" != '' ];then
       # echo `date` $line_content
         if [ `cat ../clashnodes.txt|grep  $line_content|wc -l` = 0 ];then
-            echo $line >> ../clashnodes.txt
+            echo "${line_content}"
+            if [ `echo "$line_content"|base64 -d |awk -F',' '{for(i=1;i<=NF;i++) print$i}'|sed 's/"//g'|grep 'net:'|grep -iE "ws|tcp|tls"` ];then
+                echo $line >> ../clashnodes.txt
+
+                echo "add $line"
+            fi
         fi
         fi
     done < clashnodes.txttmp;
@@ -71,9 +76,11 @@ if [ `curl -L -k ${i}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];t
         if [ "$line_content" != '' ];then
         #echo `date` 222 $line_content
         if [ `cat ../clashnodes.txt|grep  $line_content|wc -l` = 0 ];then
-            if [ `echo "line_content"|base64 -d |awk -F',' '{for(i=1;i<=NF;i++) print$i}'|sed 's/"//g'|grep 'net:'|grep -iE "ws|tcp|tls"` ];then
+            echo "$line_content"|base64 -d |awk -F',' '{for(i=1;i<=NF;i++) print$i}'|sed 's/"//g'|grep 'net:'|grep -iE "ws|tcp|tls"
+            if [ `echo "$line_content"|base64 -d |awk -F',' '{for(i=1;i<=NF;i++) print$i}'|sed 's/"//g'|grep 'net:'|grep -iE "ws|tcp|tls"` ];then
                 echo $line >> ../clashnodes.txt
-            fi
+                echo "add $line"
+            fi  
         fi
 fi
     done < clashnodes.txttmp
