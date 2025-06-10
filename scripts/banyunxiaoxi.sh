@@ -77,7 +77,6 @@ if [ `curl -L -k ${i}|grep '^vmess'|sed "s/<.*//g"|sort|uniq |wc -l` -ne '0' ];t
         fi
 fi
     done < clashnodes.txttmp
-    echo 2end
     rm -f clashnodes.txttmp;
 
 
