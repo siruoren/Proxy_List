@@ -3,7 +3,7 @@ set -e;
 cd $(dirname $0);
 
 nowdate=`date +%Y%m%d`
-nowdate_path=`date +%Y/%m/%d`
+nowdate_path=`date +%Y-%m-%d`
 weekday=`date +%w`
 
 
