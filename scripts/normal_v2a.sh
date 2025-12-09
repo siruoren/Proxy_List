@@ -24,7 +24,11 @@ rm -rf /tmp/v2ray-linux-64.zip;
 v2a_version=`get_github_latest https://github.com/v2rayA/v2rayA/releases/latest`
 
 #https://github.com/v2rayA/v2rayA/releases/download/v2.2.7.4/v2raya_linux_x64_2.2.7.4
-wget "https://github.com/v2rayA/v2rayA/releases/download/v${v2_version}/v2raya_linux_x64_${v2_version}" -O ../v2raya/bin/v2raya;
+wget "https://github.com/v2rayA/v2rayA/releases/download/v${v2a_version}/v2raya_linux_x64_${v2a_version}" -O ../v2raya/bin/v2raya;
 
 chmod -R 755 ../v2raya/;
+cd ../;
+tar -cvzf v2raya.tar.gz v2raya;
+rm -rf v2raya/bin/v2ray-core;
+rm -rf v2raya/bin/v2raya;
 
