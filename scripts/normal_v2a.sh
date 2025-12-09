@@ -15,6 +15,7 @@ mkdir -p ../v2raya/{cinfig,log,bin/v2ray-core};
 #https://github.com/v2fly/v2ray-core/releases/download/v5.41.0/v2ray-linux-64.zip
 wget "https://github.com/v2fly/v2ray-core/releases/download/v${v2_version}/v2ray-linux-64.zip" -O /tmp/v2ray-linux-64.zip;
 
+rm -rf ../v2raya/bin/v2ray-core/*;
 unzip /tmp/v2ray-linux-64.zip -d ../v2raya/bin/v2ray-core/;
 
 rm -rf /tmp/v2ray-linux-64.zip;
