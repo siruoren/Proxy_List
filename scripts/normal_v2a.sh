@@ -1,4 +1,5 @@
 #!/bin/bash
+apt install -y wget unzip dos2unix;
 cd $(dirname $0);
 function get_github_latest()
 {
