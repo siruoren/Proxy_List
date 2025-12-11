@@ -57,7 +57,7 @@ jobs:
         tag: "${{ env.v2a_version }}"
         commit: main
         token: ${{ secrets.actions_release }}
-        body: "v2a:${{ env.v2a_version }}  v2-core:${{ env.v2_version }}"
+        body: "v2a:${{ env.v2a_version }} \n v2-core:${{ env.v2_version }}"
         artifacts: "v2raya_${{ env.v2a_version }}.zip"
 
     - name: Clean
