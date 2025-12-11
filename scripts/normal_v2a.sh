@@ -9,7 +9,7 @@ function get_github_latest()
 }
 
 v2_version=`get_github_latest https://github.com/v2fly/v2ray-core/releases/latest`
-
+cp /tmp/version /tmp/v2_version
 mkdir -p ../v2raya/{cinfig,log,bin/v2ray-core};
 
 #https://github.com/v2fly/v2ray-core/releases/download/v5.41.0/v2ray-linux-64.zip
@@ -22,7 +22,7 @@ rm -rf /tmp/v2ray-linux-64.zip;
 
 
 v2a_version=`get_github_latest https://github.com/v2rayA/v2rayA/releases/latest`
-
+cp /tmp/version /tmp/v2a_version
 #https://github.com/v2rayA/v2rayA/releases/download/v2.2.7.4/v2raya_linux_x64_2.2.7.4
 wget "https://github.com/v2rayA/v2rayA/releases/download/v${v2a_version}/v2raya_linux_x64_${v2a_version}" -O ../v2raya/bin/v2raya;
 

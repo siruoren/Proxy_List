@@ -38,7 +38,8 @@ jobs:
         #bash +vvv scripts/clashnodes.sh
         bash +vvv scripts/banyunxiaoxi.sh
         bash +vvv scripts/normal_v2a.sh
-
+        v2_version=`cat /tmp/v2_version`
+        v2a_version=`cat /tmp/v2a_version`
         echo "v2a_version=$v2a_version" >> $GITHUB_ENV
         echo "v2_version=$v2_version" >> $GITHUB_ENV
         
