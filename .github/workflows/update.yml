@@ -39,6 +39,8 @@ jobs:
         bash +vvv scripts/banyunxiaoxi.sh
         bash +vvv scripts/normal_v2a.sh
 
+        echo "v2a_version=$v2a_version" >> $GITHUB_ENV
+        echo "v2_version=$v2_version" >> $GITHUB_ENV
         
 
 
@@ -46,8 +48,20 @@ jobs:
 
 
 
+    - name: Create release
+      uses: ncipollo/release-action@v1
+      with:
+        name: ${{ env.v2a_version }}
+        allowUpdates: true
+        tag: ${{ env.v2a_version }}
+        commit: main
+        token: ${{ secrets.actions_release }}
+        body: "v2a:${{ env.v2a_version }}-v2-core:${{ env.v2_version }}"
+        artifacts: "v2raya_${{ env.v2a_version }}.zip"
+
     - name: Clean
       run: |
+        rm -f v2raya_${{ env.v2a_version }}.zip
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
         git add -A
@@ -56,6 +70,15 @@ jobs:
 
     - name: Push
       run: git push -f origin main
+
+
+    - name: Remove old Releases
+      uses: dev-drprasad/delete-older-releases@v0.3.2
+      with:
+        keep_latest: 5
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.actions_release }}
 
 
     - name: Delete workflow runs for current repo

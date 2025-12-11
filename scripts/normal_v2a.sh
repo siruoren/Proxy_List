@@ -28,7 +28,7 @@ wget "https://github.com/v2rayA/v2rayA/releases/download/v${v2a_version}/v2raya_
 
 chmod -R 755 ../v2raya/;
 cd ../;
-tar -cvzf v2raya.tar.gz v2raya;
+zip -rq v2raya_${v2a_version}.zip v2raya;
 rm -rf v2raya/bin/v2ray-core;
 rm -rf v2raya/bin/v2raya;
 
