@@ -52,9 +52,9 @@ jobs:
     - name: Create release
       uses: ncipollo/release-action@v1
       with:
-        name: "V_${{ env.v2a_version }}"
+        name: "${{ env.v2a_version }}"
         allowUpdates: true
-        tag: "V_${{ env.v2a_version }}"
+        tag: "${{ env.v2a_version }}"
         commit: main
         token: ${{ secrets.actions_release }}
         body: "v2a:${{ env.v2a_version }}  v2-core:${{ env.v2_version }}"
