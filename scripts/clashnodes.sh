@@ -6,7 +6,7 @@ nowdate=`date +%Y%m%d`
 weekday=`date +%w`
 
 
-if [ `curl -s https://clashgithub.com/clashnode-${nowdate}.html|grep -iE "vmess://|ss://|vless://"|grep -v "<"|wc -l` -eq '0' ];then
+if [ `curl -s -k https://clashgithub.com/wp-content/uploads/rss/${nowdate}.txt|wc -l` -eq '0' ];then
    echo "remote clashnodes rss error,skip update!!!"
 
 else
@@ -16,9 +16,9 @@ else
   fi;
 
   cat ../clashnodes.txt > clashnodes.txttmp
-  curl -k -s https://clashgithub.com/clashnode-${nowdate}.html|grep -iE "vmess://|ss://|vless://"|grep -v "<" >> clashnodes.txttmp
+  curl -k -s https://clashgithub.com/wp-content/uploads/rss/${nowdate}.txt >> clashnodes.txttmp
 
-  sed -i '/^</d' clashnodes.txttmp
+
   cat clashnodes.txttmp|sort -r |uniq > ../clashnodes.txt
 
   rm -f clashnodes.txttmp;
