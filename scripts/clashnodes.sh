@@ -11,7 +11,7 @@ if [ `curl -s https://clashgithub.com/clashnode-${nowdate}.html|grep -iE "vmess:
 
 else
 
-  if [ "${weekday}" == "6" ];then
+  if [ "${weekday}" == "1" ];then
     > ../clashnodes.txt
   fi;
 
