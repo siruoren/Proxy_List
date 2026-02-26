@@ -5,7 +5,8 @@ set -euo pipefail
 # 脚本目录
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 # 项目根目录
-PROJECT_ROOT="$SCRIPT_DIR/.."
+PROJECT_ROOT="$SCRIPT_DIR/datiya/"
+mkdir -p ${PROJECT_ROOT}
 # 日期信息
 TODAY=$(date +%Y%m%d)
 # 下载URL
