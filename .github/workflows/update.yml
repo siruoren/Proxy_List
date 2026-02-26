@@ -23,6 +23,7 @@ jobs:
       run: |
         echo "::set-output name=date::$(date +'%Y-%m-%d %H:%M:%S CST')"
         sudo apt install -y wget unzip dos2unix;
+        sudo pip install pyyaml pyperclip
 
     - name: Update
       run: |
@@ -34,7 +35,7 @@ jobs:
         echo '------------------------------------------------' >> README.md
         chmod -R 755 scripts/*;
         
-        #bash +vvv scripts//tg_socks.sh
+        bash +vvv scripts/datiya.sh
         #bash +vvv scripts/clashnodes.sh
         #bash +vvv scripts/banyunxiaoxi.sh
         #bash +vvv scripts/normal_v2a.sh
