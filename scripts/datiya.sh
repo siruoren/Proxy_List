@@ -5,7 +5,7 @@ set -euo pipefail
 # 脚本目录
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 # 项目根目录
-PROJECT_ROOT="$SCRIPT_DIR/datiya/"
+PROJECT_ROOT="$SCRIPT_DIR/../datiya/"
 mkdir -p ${PROJECT_ROOT}
 # 日期信息
 TODAY=$(date +%Y%m%d)
@@ -30,12 +30,46 @@ error_exit() {
     exit 1
 }
 
-# 清理函数
+# 清理临时文件函数
 cleanup() {
     if [ -f "$TEMP_FILE" ]; then
         rm -f "$TEMP_FILE"
         log "已清理临时文件: $TEMP_FILE"
     fi
+}
+
+# 清理七天前的文件函数
+clean_old_files() {
+    log "开始清理七天前的文件..."
+    
+    # 检查datiya目录是否存在
+    if [ ! -d "$PROJECT_ROOT" ]; then
+        log "datiya目录不存在，跳过清理"
+        return
+    fi
+    
+    # 删除七天前的文件
+    # 查找并删除七天前的文件，只删除符合日期格式的文件
+    old_files=$(find "$PROJECT_ROOT" -type f -name "*.txt" -mtime +6)
+    
+    if [ -z "$old_files" ]; then
+        log "没有找到需要清理的文件"
+        return
+    fi
+    
+    # 统计文件数量
+    file_count=$(echo "$old_files" | wc -l)
+    log "找到 $file_count 个七天前的文件，开始清理..."
+    
+    # 删除文件
+    echo "$old_files" | while read -r file; do
+        if [ -f "$file" ]; then
+            rm -f "$file"
+            log "已删除文件: $(basename "$file")"
+        fi
+    done
+    
+    log "清理完成，共删除 $file_count 个文件"
 }
 
 # 检查依赖
@@ -99,6 +133,9 @@ convert_config() {
 # 主函数
 main() {
     log "开始处理 datiya 配置..."
+    
+    # 清理七天前的文件
+    clean_old_files
     
     # 检查依赖
     check_dependencies
