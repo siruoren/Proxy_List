@@ -180,14 +180,21 @@ def main():
                 # 获取节点配置信息
                 node_config = get_node_config(sub_id, node_id)
                 if node_config:
-                    # 生成v2ray订阅链接
-                    share_link = generate_v2ray_sub_link(node_config)
-                    new_links.append(share_link)
-                    print(f"  添加代理: {node_config.get('name', '未知')}")
-                    
-                    # 立即写入到文件
-                    with open(output_file, "a", encoding="utf-8") as f:
-                        f.write(f"{share_link}\n")
+                    # 检查net协议是否为tcp
+                    net_value = node_config.get('net', 'tcp')
+                    if '(' in net_value and ')' in net_value:
+                        net_value = net_value.split('(')[1].split(')')[0]
+                    if net_value == 'tcp':
+                        # 生成v2ray订阅链接
+                        share_link = generate_v2ray_sub_link(node_config)
+                        new_links.append(share_link)
+                        print(f"  添加代理: {node_config.get('name', '未知')}")
+                        
+                        # 立即写入到文件
+                        with open(output_file, "a", encoding="utf-8") as f:
+                            f.write(f"{share_link}\n")
+                    else:
+                        print(f"  跳过代理: {node_config.get('name', '未知')} (net协议不是tcp)")
         
         # 合并现有链接和新链接，去重并保留最新的500个
         all_links = list(set(new_links + existing_links))
