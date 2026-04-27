@@ -175,7 +175,7 @@ def main():
         # 清空文件并写入头部信息
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(f"# 代理订阅链接 - 生成时间: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
-            f.write(f"# 保留最新的1000个\n\n")
+            f.write(f"# 保留最新的500个\n\n")
         
         # 处理每个已连接的代理
         new_links = []
@@ -212,18 +212,18 @@ def main():
                     with open(output_file, "a", encoding="utf-8") as f:
                         f.write(f"{share_link}\n")
         
-        # 合并现有链接和新链接，去重并保留最新的1000个
+        # 合并现有链接和新链接，去重并保留最新的500个
         all_links = list(set(new_links + existing_links))
-        # 保留最新的1000个（这里假设新链接是最新的）
+        # 保留最新的500个（这里假设新链接是最新的）
         all_links = new_links + [link for link in existing_links if link not in new_links]
-        if len(all_links) > 1000:
-            all_links = all_links[:1000]
+        if len(all_links) > 500:
+            all_links = all_links[:500]
         
-        # 重新写入文件，只保留最新的1000个
+        # 重新写入文件，只保留最新的500个
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(f"# 代理订阅链接 - 生成时间: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
             f.write(f"# 共 {len(all_links)} 个代理节点\n")
-            f.write(f"# 保留最新的1000个\n\n")
+            f.write(f"# 保留最新的500个\n\n")
             for link in all_links:
                 f.write(f"{link}\n")
         
