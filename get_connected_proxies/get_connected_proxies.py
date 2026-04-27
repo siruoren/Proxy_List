@@ -50,39 +50,6 @@ def bulid_request_body(node_ids, sub_num):
     # 转换为JSON字符串
     return json.dumps(_nodes).replace("'", '"')
 
-# 测试节点延迟
-def test_httpLatency(nodes, sub_id):
-    '''测试节点延迟'''
-    str_nodes = bulid_request_body(nodes, sub_id)
-    url = f"{HOST}/api/httpLatency?whiches={str_nodes}"
-    try:
-        response = requests.get(url, headers={"Authorization": TOKEN})
-        if response.status_code == 200:
-            return True
-    except Exception as e:
-        print(f"测试节点延迟失败: {e}")
-    return False
-
-# 获取代理服务器的时延
-def get_proxy_latency(sub_id, node_id):
-    '''从服务状态中获取节点的延迟信息'''
-    status = get_status()
-    for sub in status["data"]["touch"]["subscriptions"]:
-        if sub["id"] == sub_id:
-            for node in sub["servers"]:
-                if node["id"] == node_id:
-                    ping_latency = node.get("pingLatency", "9999ms")
-                    # 处理延迟格式
-                    if "ms" in ping_latency:
-                        try:
-                            return int(ping_latency.replace("ms", ""))
-                        except ValueError:
-                            return 9999
-                    try:
-                        return int(ping_latency)
-                    except ValueError:
-                        return 9999
-    return 9999
 
 # 生成v2ray订阅链接
 def generate_v2ray_sub_link(node_config):
@@ -99,19 +66,29 @@ def generate_v2ray_sub_link(node_config):
         add = ':'.join(parts[:-1])
         port = parts[-1]
     
-    # 构建v2ray配置
+    # 构建v2ray配置，按照示例格式排序
+    # 提取纯协议名称，去除可能的vmess前缀
+    net_value = node_config.get('net', 'tcp')
+    if '(' in net_value and ')' in net_value:
+        # 提取括号内的协议名称
+        net_value = net_value.split('(')[1].split(')')[0]
+    
     v2ray_config = {
-        "v": "2",
         "ps": node_config.get('name', '未知节点'),
         "add": add,
         "port": port,
         "id": node_config.get('id', ''),
         "aid": node_config.get('aid', '0'),
-        "net": node_config.get('net', 'tcp'),
+        "scy": node_config.get('scy', 'auto'),
+        "net": net_value,
         "type": node_config.get('type', 'none'),
         "host": node_config.get('host', ''),
         "path": node_config.get('path', ''),
-        "tls": node_config.get('tls', 'none')
+        "tls": node_config.get('tls', 'none'),
+        "allowInsecure": False,
+        "quicSecurity": "",
+        "v": "2",
+        "protocol": "vmess"
     }
     
     # 转换为vmess链接格式
