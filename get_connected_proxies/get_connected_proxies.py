@@ -1,135 +1,249 @@
-import json
 import os
 import requests
-import time
+import json
 import base64
+from urllib.parse import urlparse
 
-def load_config():
-    with open("v2raya_auth.json", "r", encoding='utf8') as f:
-        config = json.load(f)
-    if "node_params" not in config:
-        config["node_params"] = {
-            "vmess": {"uuid": "d13fc2f5-3e05-4795-81eb-44143a09e552", "alterId": 0},
-            "ss": {"method": "aes-256-gcm", "password": "your_ss_password"},
-            "trojan": {"password": "your_trojan_password"},
-            "vless": {"uuid": "d13fc2f5-3e05-4795-81eb-44143a09e552"}
-        }
-    return config
+def login(base_url, username, password):
+    session = requests.Session()
+    headers = {'User-Agent': 'Mozilla/5.0', 'content-type': 'application/json'}
 
-def login(config):
-    url = f"{config['host']}/api/login"
-    payload = {"username": config['username'], "password": config['password']}
-    headers = {"content-type": "application/json"}
-    response = requests.post(url, json=payload, headers=headers)
-    return response.json()["data"]["token"]
+    response = session.post(f"{base_url}/api/login", json={'username': username, 'password': password}, headers=headers)
+    if response.json().get('code') != 'SUCCESS':
+        raise Exception("登录失败")
 
-def get_status(host, token):
-    url = f"{host}/api/touch"
-    response = requests.get(url, headers={"Authorization": token})
-    return response.json()
+    token = response.json()["data"]["token"]
+    headers['Authorization'] = token
+    return session, headers
 
-def get_connected_servers(status):
-    return status["data"]["touch"]["connectedServer"]
+def get_connected_nodes(session, headers, base_url):
+    response = session.get(f"{base_url}/api/touch", headers=headers, timeout=10)
+    data = response.json()
 
-def build_subscription_urls(connected_servers, status, config):
-    subscription_urls = []
-    subscriptions = status["data"]["touch"]["subscriptions"]
-    vmess_uuid = config["node_params"]["vmess"]["uuid"]
-    ss_password = config["node_params"]["ss"]["password"]
-    trojan_password = config["node_params"]["trojan"]["password"]
-    vless_uuid = config["node_params"]["vless"]["uuid"]
+    connected = data['data']['touch']['connectedServer']
+    subscriptions = data['data']['touch']['subscriptions']
 
-    for connect in connected_servers:
-        if connect.get("_type") == "subscriptionServer":
-            sub_id = connect.get("sub")
-            node_id = connect.get("id")
+    connected_nodes = []
+    for conn in connected:
+        node_id = conn['id']
+        sub_index = conn['sub']
+        outbound = conn.get('outbound', 'proxy')
 
-            for sub in subscriptions:
-                if sub.get("id") == sub_id + 1:
-                    for server in sub.get("servers", []):
-                        if server.get("id") == node_id:
-                            net_field = server.get('net', '')
-                            protocol = net_field.split('(')[0].lower()
+        if sub_index < len(subscriptions):
+            sub = subscriptions[sub_index]
+            for server in sub.get('servers', []):
+                if server['id'] == node_id:
+                    connected_nodes.append({
+                        'id': node_id,
+                        'sub_index': sub_index,
+                        'name': server.get('name'),
+                        'address': server.get('address'),
+                        'net': server.get('net'),
+                        'outbound': outbound
+                    })
+                    break
+    return connected_nodes
 
-                            if protocol == 'vmess':
-                                address = server.get("address", "")
-                                add = address
-                                port = server.get("port")
-                                if ':' in address:
-                                    parts = address.split(':')
-                                    add = ':'.join(parts[:-1])
-                                    port = parts[-1]
+def parse_subscription(content):
+    share_links = []
+    lines = content.strip().split('\n')
 
-                                vmess_config = {
-                                    "ps": server.get("name"),
-                                    "add": add,
-                                    "port": port or server.get("port", ""),
-                                    "id": vmess_uuid,
-                                    "aid": config["node_params"]["vmess"]["alterId"],
-                                    "scy": "auto",
-                                    "net": net_field.split('(')[1].rstrip(')') if '(' in net_field else 'tcp',
-                                    "type": server.get("type", ""),
-                                    "host": server.get("host", ""),
-                                    "path": server.get("path", ""),
-                                    "tls": server.get("tls", ""),
-                                    "allowInsecure": False,
-                                    "quicSecurity": "",
-                                    "v": "2",
-                                    "protocol": "vmess"
-                                }
-                                vmess_json = json.dumps(vmess_config, ensure_ascii=False)
-                                vmess_b64 = base64.b64encode(vmess_json.encode('utf-8')).decode('utf-8')
-                                subscription_urls.append(f"vmess://{vmess_b64}")
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
 
-                            elif protocol == 'trojan':
-                                trojan_url = f"trojan://{trojan_password}@{server.get('address')}:{server.get('port')}?security={server.get('tls', 'tls')}&sni={server.get('sni', '')}&type={server.get('type', 'tcp')}&path={server.get('path', '')}#{server.get('name')}"
-                                subscription_urls.append(trojan_url)
+        if line.startswith('vmess://'):
+            try:
+                config_b64 = line[8:]
+                config_json = base64.b64decode(config_b64).decode('utf-8')
+                config = json.loads(config_json)
+                share_links.append({
+                    'protocol': 'vmess',
+                    'name': config.get('ps', ''),
+                    'address': config.get('add', ''),
+                    'port': config.get('port', ''),
+                    'link': line
+                })
+            except:
+                pass
 
-                            elif protocol == 'ss':
-                                method = net_field.split('(')[1].rstrip(')') if '(' in net_field else config["node_params"]["ss"]["method"]
-                                ss_config = f"{method}:{ss_password}@{server.get('address')}:{server.get('port')}"
-                                ss_b64 = base64.b64encode(ss_config.encode('utf-8')).decode('utf-8')
-                                subscription_urls.append(f"ss://{ss_b64}#{server.get('name')}")
+        elif line.startswith('vless://'):
+            share_links.append({
+                'protocol': 'vless',
+                'name': '',
+                'address': '',
+                'port': '',
+                'link': line
+            })
 
-                            elif protocol == 'vless':
-                                vless_url = f"vless://{vless_uuid}@{server.get('address')}:{server.get('port')}?security={server.get('tls', 'tls')}&sni={server.get('sni', '')}&type={net_field.split('(')[1].rstrip(')') if '(' in net_field else 'tcp'}&path={server.get('path', '')}#{server.get('name')}"
-                                subscription_urls.append(vless_url)
+        elif line.startswith('trojan://'):
+            try:
+                parsed = urlparse(line)
+                netloc = parsed.netloc
+                if '@' in netloc:
+                    addr_part = netloc.split('@')[1]
+                    host_port = addr_part.rsplit(':', 1) if ':' in addr_part else (addr_part, '')
+                    share_links.append({
+                        'protocol': 'trojan',
+                        'name': '',
+                        'address': host_port[0],
+                        'port': host_port[1] if len(host_port) > 1 else '',
+                        'link': line
+                    })
+            except:
+                pass
 
-    return subscription_urls
+        elif line.startswith('ss://'):
+            share_links.append({
+                'protocol': 'ss',
+                'name': '',
+                'address': '',
+                'port': '',
+                'link': line
+            })
 
-def write_subscription_file(subscription_urls, filename="proxy_subscriptions.txt"):
-    existing_urls = []
-    if os.path.exists(filename):
-        with open(filename, "r", encoding='utf-8') as f:
-            existing_urls = [line.strip() for line in f if line.strip()]
+    return share_links
 
-    existing_set = set(existing_urls)
-    new_urls = [url for url in subscription_urls if url not in existing_set]
+def normalize_string(s):
+    if not s:
+        return ''
+    return s.replace(' ', '').replace('-', '').replace('_', '').lower()
 
-    all_urls = existing_urls + new_urls
-    urls_to_write = all_urls[-500:] if len(all_urls) > 500 else all_urls
+def strings_similar(s1, s2, threshold=0.6):
+    if not s1 or not s2:
+        return False
+    s1_norm = normalize_string(s1)
+    s2_norm = normalize_string(s2)
+    if s1_norm in s2_norm or s2_norm in s1_norm:
+        return True
+    return False
 
-    with open(filename, "w", encoding='utf-8') as f:
-        for url in urls_to_write:
-            f.write(url + "\n")
+def load_existing_links(output_file):
+    existing_links = set()
+    if os.path.exists(output_file):
+        with open(output_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    existing_links.add(line)
+    return existing_links
 
-    print(f"新增 {len(new_urls)} 条订阅地址，已写入文件: {filename}, 共 {len(urls_to_write)} 条")
+def append_link(link, output_file, max_lines=500):
+    existing_links = load_existing_links(output_file)
+
+    if link in existing_links:
+        return False
+
+    all_links = list(existing_links) + [link]
+    if len(all_links) > max_lines:
+        all_links = all_links[-max_lines:]
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        for l in all_links:
+            f.write(l + '\n')
+
+    return True
+
+def match_nodes(connected_nodes, subscriptions, session, output_file, max_lines=500):
+    matched_count = 0
+    matched_node_ids = set()
+
+    for conn_node in connected_nodes:
+        if conn_node['id'] in matched_node_ids:
+            continue
+
+        conn_name = conn_node['name']
+        conn_address = conn_node['address']
+        conn_sub_index = conn_node['sub_index']
+
+        best_match = None
+        best_match_quality = 0
+
+        for sub_index, sub in enumerate(subscriptions):
+            sub_address = sub.get('address')
+            if not sub_address:
+                continue
+
+            try:
+                sub_response = session.get(sub_address, timeout=15)
+                content = sub_response.text
+                share_links = parse_subscription(content)
+
+                for link_info in share_links:
+                    link = link_info['link']
+                    link_name = link_info['name']
+                    link_address = link_info['address']
+
+                    quality = 0
+
+                    name_similar = strings_similar(conn_name, link_name)
+                    addr_similar = strings_similar(conn_address, link_address)
+
+                    same_sub = (sub_index == conn_sub_index)
+
+                    if name_similar and addr_similar:
+                        quality = 3
+                    elif name_similar:
+                        quality = 2
+                    elif addr_similar:
+                        quality = 1
+                    elif same_sub and (conn_name in link_name or link_name in conn_name):
+                        quality = 1.5
+
+                    if quality > best_match_quality:
+                        best_match_quality = quality
+                        best_match = {
+                            'node': conn_node,
+                            'link': link,
+                            'quality': quality
+                        }
+
+            except Exception as e:
+                continue
+
+        if best_match and best_match['quality'] >= 1:
+            matched_node_ids.add(conn_node['id'])
+            print(f"匹配成功: {conn_node['name']} (质量: {best_match['quality']})")
+            print(f"  地址: {conn_node['address']}")
+
+            is_new = append_link(best_match['link'], output_file, max_lines)
+            if is_new:
+                matched_count += 1
+                print(f"  -> 已写入新链接")
+            else:
+                print(f"  -> 链接已存在")
+
+    return matched_count
 
 def main():
-    config = load_config()
-    token = login(config)
-    print(f"登录成功，获取到token: {token[:20]}...")
+    config = {
+        'host': 'http://192.168.31.120:2017',
+        'username': 'admin',
+        'password': 'password'
+    }
 
-    status = get_status(config['host'], token)
-    print("获取服务状态成功")
+    base_url = config['host']
+    username = config['username']
+    password = config['password']
 
-    connected_servers = get_connected_servers(status)
-    print(f"已连接的节点数量: {len(connected_servers)}")
+    print(f"正在连接: {base_url}")
+    print(f"用户名: {username}\n")
 
-    subscription_urls = build_subscription_urls(connected_servers, status, config)
-    print(f"生成的订阅地址数量: {len(subscription_urls)}")
+    session, headers = login(base_url, username, password)
+    print("登录成功\n")
 
-    write_subscription_file(subscription_urls)
+    connected_nodes = get_connected_nodes(session, headers, base_url)
+    print(f"已连接 {len(connected_nodes)} 个节点\n")
 
-if __name__ == "__main__":
+    response = session.get(f"{base_url}/api/touch", headers=headers, timeout=10)
+    data = response.json()
+    subscriptions = data['data']['touch']['subscriptions']
+
+    output_file = 'proxy_subscriptions.txt'
+    matched_count = match_nodes(connected_nodes, subscriptions, session, output_file, max_lines=500)
+
+    print(f"\n共写入 {matched_count} 个新链接到: {output_file}")
+
+if __name__ == '__main__':
     main()
