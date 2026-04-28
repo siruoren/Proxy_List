@@ -145,78 +145,80 @@ def append_link(link, output_file, max_lines=500):
 
     return True
 
-def load_subscriptions(subscriptions, session):
-    sub_cache = {}
-    for sub_index, sub in enumerate(subscriptions):
-        sub_address = sub.get('address')
-        if not sub_address:
-            continue
-        try:
-            print(f"正在加载订阅源: {sub.get('remarks', f'订阅 {sub_index}')}")
-            sub_response = session.get(sub_address, timeout=15)
-            content = sub_response.text
-            share_links = parse_subscription(content)
-            sub_cache[sub_index] = share_links
-            print(f"  -> 已加载 {len(share_links)} 个节点")
-        except Exception as e:
-            print(f"  -> 加载失败: {str(e)}")
-            sub_cache[sub_index] = []
-    return sub_cache
-
-def match_nodes(connected_nodes, sub_cache, output_file, max_lines=500):
+def process_subscription(sub_index, sub, connected_nodes, session, output_file, max_lines=500):
     matched_count = 0
     matched_node_ids = set()
 
-    for conn_node in connected_nodes:
+    sub_address = sub.get('address')
+    if not sub_address:
+        return 0
+
+    try:
+        print(f"\n正在加载订阅源: {sub.get('remarks', f'订阅 {sub_index}')}")
+        sub_response = session.get(sub_address, timeout=15)
+        content = sub_response.text
+        share_links = parse_subscription(content)
+        print(f"  -> 已加载 {len(share_links)} 个节点")
+    except Exception as e:
+        print(f"  -> 加载失败: {str(e)}")
+        return 0
+
+    # 获取该订阅源下已连接的节点
+    sub_connected_nodes = [
+        node for node in connected_nodes
+        if node['sub_index'] == sub_index and node['id'] not in matched_node_ids
+    ]
+
+    print(f"  -> 该订阅源下已连接 {len(sub_connected_nodes)} 个节点")
+
+    # 匹配该订阅源下的已连接节点
+    for conn_node in sub_connected_nodes:
         if conn_node['id'] in matched_node_ids:
             continue
 
         conn_name = conn_node['name']
         conn_address = conn_node['address']
-        conn_sub_index = conn_node['sub_index']
 
         best_match = None
         best_match_quality = 0
 
-        # 只在节点所属的订阅源中匹配
-        if conn_sub_index in sub_cache:
-            for link_info in sub_cache[conn_sub_index]:
-                link = link_info['link']
-                link_name = link_info['name']
-                link_address = link_info['address']
+        for link_info in share_links:
+            link = link_info['link']
+            link_name = link_info['name']
+            link_address = link_info['address']
 
-                name_similar = strings_similar(conn_name, link_name)
-                addr_similar = strings_similar(conn_address, link_address)
+            name_similar = strings_similar(conn_name, link_name)
+            addr_similar = strings_similar(conn_address, link_address)
 
-                quality = 0
-                if name_similar and addr_similar:
-                    quality = 3
-                elif name_similar:
-                    quality = 2
-                elif addr_similar:
-                    quality = 1
-                elif conn_name in link_name or link_name in conn_name:
-                    quality = 1.5
+            quality = 0
+            if name_similar and addr_similar:
+                quality = 3
+            elif name_similar:
+                quality = 2
+            elif addr_similar:
+                quality = 1
+            elif conn_name in link_name or link_name in conn_name:
+                quality = 1.5
 
-                if quality > best_match_quality:
-                    best_match_quality = quality
-                    best_match = {
-                        'node': conn_node,
-                        'link': link,
-                        'quality': quality
-                    }
+            if quality > best_match_quality:
+                best_match_quality = quality
+                best_match = {
+                    'node': conn_node,
+                    'link': link,
+                    'quality': quality
+                }
 
         if best_match and best_match['quality'] >= 1:
             matched_node_ids.add(conn_node['id'])
-            print(f"匹配成功: {conn_node['name']} (质量: {best_match['quality']})")
-            print(f"  地址: {conn_node['address']}")
+            print(f"    匹配成功: {conn_node['name']} (质量: {best_match['quality']})")
+            print(f"      地址: {conn_node['address']}")
 
             is_new = append_link(best_match['link'], output_file, max_lines)
             if is_new:
                 matched_count += 1
-                print(f"  -> 已写入新链接")
+                print(f"      -> 已写入新链接")
             else:
-                print(f"  -> 链接已存在")
+                print(f"      -> 链接已存在")
 
     return matched_count
 
@@ -244,14 +246,15 @@ def main():
     data = response.json()
     subscriptions = data['data']['touch']['subscriptions']
 
-    print("正在加载所有订阅源...")
-    sub_cache = load_subscriptions(subscriptions, session)
-    print(f"\n开始匹配节点...\n")
-
     output_file = 'proxy_subscriptions.txt'
-    matched_count = match_nodes(connected_nodes, sub_cache, output_file, max_lines=500)
+    total_matched = 0
 
-    print(f"\n共写入 {matched_count} 个新链接到: {output_file}")
+    print("开始循环处理每个订阅源...")
+    for sub_index, sub in enumerate(subscriptions):
+        matched_count = process_subscription(sub_index, sub, connected_nodes, session, output_file, max_lines=500)
+        total_matched += matched_count
+
+    print(f"\n共写入 {total_matched} 个新链接到: {output_file}")
 
 if __name__ == '__main__':
     main()
