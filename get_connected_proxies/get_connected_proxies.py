@@ -222,8 +222,9 @@ def process_subscription(sub_index, sub, connected_nodes, session, output_file, 
 
     return matched_count
 
+
 def main():
-    config_content=open('V2raya_auth.json',"r",encoding="utf-8")
+    config_content=open('v2raya_auth.json',"r",encoding="utf-8")
     config = json.load(config_content)
 
     base_url = config['host']
