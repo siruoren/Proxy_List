@@ -42,7 +42,7 @@ def get_connected_nodes(session, headers, base_url):
                         'outbound': outbound
                     })
                     break
-    return connected_nodes
+    return connected_nodes, subscriptions
 
 def parse_subscription(content):
     share_links = []
@@ -197,8 +197,6 @@ def process_subscription(sub_index, sub, connected_nodes, session, output_file, 
                 quality = 2
             elif addr_similar:
                 quality = 1
-            elif conn_name in link_name or link_name in conn_name:
-                quality = 1.5
 
             if quality > best_match_quality:
                 best_match_quality = quality
@@ -224,8 +222,8 @@ def process_subscription(sub_index, sub, connected_nodes, session, output_file, 
 
 
 def main():
-    config_content=open('v2raya_auth.json',"r",encoding="utf-8")
-    config = json.load(config_content)
+    with open('v2raya_auth.json', 'r', encoding='utf-8') as f:
+        config = json.load(f)
 
     base_url = config['host']
     username = config['username']
@@ -237,12 +235,8 @@ def main():
     session, headers = login(base_url, username, password)
     print("登录成功\n")
 
-    connected_nodes = get_connected_nodes(session, headers, base_url)
+    connected_nodes, subscriptions = get_connected_nodes(session, headers, base_url)
     print(f"已连接 {len(connected_nodes)} 个节点\n")
-
-    response = session.get(f"{base_url}/api/touch", headers=headers, timeout=10)
-    data = response.json()
-    subscriptions = data['data']['touch']['subscriptions']
 
     output_file = 'proxy_subscriptions.txt'
     total_matched = 0
