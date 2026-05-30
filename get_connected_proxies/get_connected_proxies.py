@@ -243,7 +243,7 @@ def main():
 
     print("开始循环处理每个订阅源...")
     for sub_index, sub in enumerate(subscriptions):
-        matched_count = process_subscription(sub_index, sub, connected_nodes, session, output_file, max_lines=500)
+        matched_count = process_subscription(sub_index, sub, connected_nodes, session, output_file, max_lines=200)
         total_matched += matched_count
 
     print(f"\n共写入 {total_matched} 个新链接到: {output_file}")
