@@ -145,7 +145,7 @@ def append_link(link, output_file, max_lines=200):
 
     return True
 
-def process_subscription(sub_index, sub, connected_nodes, session, output_file, max_lines=500):
+def process_subscription(sub_index, sub, connected_nodes, session, output_file, max_lines=200):
     matched_count = 0
     matched_node_ids = set()
 
