@@ -129,7 +129,7 @@ def load_existing_links(output_file):
                     existing_links.add(line)
     return existing_links
 
-def append_link(link, output_file, max_lines=500):
+def append_link(link, output_file, max_lines=200):
     existing_links = load_existing_links(output_file)
 
     if link in existing_links:
