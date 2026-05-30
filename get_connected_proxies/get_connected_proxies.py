@@ -247,6 +247,13 @@ def main():
         total_matched += matched_count
 
     print(f"\n共写入 {total_matched} 个新链接到: {output_file}")
+    with open(output_file, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+    if len(lines) > 200:
+        lines = lines[-200:]
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.writelines(lines)
+    print(f"当前文件共 {len(lines)} 行")
 
 if __name__ == '__main__':
     main()
