@@ -129,23 +129,18 @@ def load_existing_links(output_file):
                     existing_links.add(line)
     return existing_links
 
-def append_link(link, output_file, max_lines=200):
+def append_link(link, output_file):
     existing_links = load_existing_links(output_file)
 
     if link in existing_links:
         return False
 
-    all_links = list(existing_links) + [link]
-    if len(all_links) > max_lines:
-        all_links = all_links[-max_lines:]
-
-    with open(output_file, 'w', encoding='utf-8') as f:
-        for l in all_links:
-            f.write(l + '\n')
+    with open(output_file, 'a', encoding='utf-8') as f:
+        f.write(link + '\n')
 
     return True
 
-def process_subscription(sub_index, sub, connected_nodes, session, output_file, max_lines=200):
+def process_subscription(sub_index, sub, connected_nodes, session, output_file, single_max=50):
     matched_count = 0
     matched_node_ids = set()
 
@@ -163,7 +158,6 @@ def process_subscription(sub_index, sub, connected_nodes, session, output_file, 
         print(f"  -> 加载失败: {str(e)}")
         return 0
 
-    # 获取该订阅源下已连接的节点
     sub_connected_nodes = [
         node for node in connected_nodes
         if node['sub_index'] == sub_index and node['id'] not in matched_node_ids
@@ -171,9 +165,12 @@ def process_subscription(sub_index, sub, connected_nodes, session, output_file, 
 
     print(f"  -> 该订阅源下已连接 {len(sub_connected_nodes)} 个节点")
 
-    # 匹配该订阅源下的已连接节点
     for conn_node in sub_connected_nodes:
         if conn_node['id'] in matched_node_ids:
+            continue
+
+        if matched_count >= single_max:
+            print(f"    已达到单个订阅最大 {single_max} 个链接限制，跳过")
             continue
 
         conn_name = conn_node['name']
@@ -211,7 +208,7 @@ def process_subscription(sub_index, sub, connected_nodes, session, output_file, 
             print(f"    匹配成功: {conn_node['name']} (质量: {best_match['quality']})")
             print(f"      地址: {conn_node['address']}")
 
-            is_new = append_link(best_match['link'], output_file, max_lines)
+            is_new = append_link(best_match['link'], output_file)
             if is_new:
                 matched_count += 1
                 print(f"      -> 已写入新链接")
@@ -243,7 +240,7 @@ def main():
 
     print("开始循环处理每个订阅源...")
     for sub_index, sub in enumerate(subscriptions):
-        matched_count = process_subscription(sub_index, sub, connected_nodes, session, output_file, max_lines=200)
+        matched_count = process_subscription(sub_index, sub, connected_nodes, session, output_file)
         total_matched += matched_count
 
     print(f"\n共写入 {total_matched} 个新链接到: {output_file}")
