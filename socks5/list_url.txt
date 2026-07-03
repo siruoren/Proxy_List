@@ -1,0 +1,2 @@
+https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks5.txt
+https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt
