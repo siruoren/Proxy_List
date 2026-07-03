@@ -12,7 +12,8 @@ rm -f socks.txt && wget https://raw.githubusercontent.com/hookzof/socks5_list/ma
 for line in `cat socks.txt`
 do
   if [ "${line}" != "" ];then
-    echo "socks5://${line}" >> tg_list.txttmp;
+    ip=`echo ${line}|awk -F':' '{print$1}'`
+    echo "socks5://${line}#${ip}" >> tg_list.txttmp;
   fi
 done
 
