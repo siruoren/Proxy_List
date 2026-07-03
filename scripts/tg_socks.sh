@@ -7,7 +7,7 @@ cd $(dirname $0);
 #   fi;
 # fi
 cp ../tg_list.txt tg_list.txttmp;
-rm -f socks.json && wget https://raw.githubusercontent.com/hookzof/socks5_list/master/tg/socks.json -O socks.json
+rm -f socks.json && wget https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt -O socks.json
 
 for line in `awk -F '{' '{for(i=1;i<=NF;i++) print$i}' socks.json `
 do
