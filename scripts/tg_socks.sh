@@ -12,7 +12,7 @@ rm -f socks.txt && wget https://raw.githubusercontent.com/hookzof/socks5_list/ma
 for line in `cat socks.txt`
 do
   if [ "${line}" != "" ];then
-    name=`echo ${line}|sed 's/-//g'`
+    name=`echo ${line}|sed 's/:/-/g'`
     echo "socks5://${line}#${name}" >> tg_list.txttmp;
   fi
 done
