@@ -3,10 +3,10 @@ name: Update
 on:
   watch:
     types: [started]
-  schedule:
-    - cron: '0 2 * * *'
-  push:
-    branches: [ "main" ]
+  # schedule:
+  #   - cron: '0 2 * * *'
+  # push:
+  #   branches: [ "main" ]
 
 env:
   TZ: Asia/Shanghai
@@ -34,7 +34,7 @@ jobs:
         echo "# Auto Update  at ${{ steps.date.outputs.date }}" >> README.md
         echo '------------------------------------------------' >> README.md
         chmod -R 755 scripts/*;
-        bash +vvv scripts/tg_socks.sh
+        #bash +vvv scripts/tg_socks.sh
         #bash +vvv scripts/datiya.sh
         #bash +vvv scripts/clashnodes.sh
         #bash +vvv scripts/banyunxiaoxi.sh
