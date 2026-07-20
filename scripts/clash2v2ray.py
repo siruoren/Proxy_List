@@ -112,7 +112,10 @@ class ClashToV2ray:
         """保存链接到文件"""
         try:
             with open(self.output_file, 'w', encoding='utf-8') as f:
-                f.write('\n'.join(links))
+                if links:
+                    f.write('\n'.join(links) + '\n')
+                else:
+                    f.write('')
             print(f"结果已保存至 {self.output_file}")
         except Exception as e:
             print(f"保存文件失败: {e}")

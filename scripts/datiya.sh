@@ -13,8 +13,8 @@ TODAY=$(date +%Y%m%d)
 DOWNLOAD_URL="https://free.datiya.com/uploads/${TODAY}-clash.yaml"
 # 临时文件
 TEMP_FILE="$SCRIPT_DIR/${TODAY}-clash.yaml"
-# 输出文件
-OUTPUT_FILE="$PROJECT_ROOT/${TODAY}-v2ray.txt"
+# 输出文件（固定文件名，只保留最新）
+OUTPUT_FILE="$PROJECT_ROOT/datiya.txt"
 # Python脚本路径
 PYTHON_SCRIPT="$SCRIPT_DIR/clash2v2ray.py"
 
@@ -38,9 +38,9 @@ cleanup() {
     fi
 }
 
-# 清理七天前的文件函数
+# 清理旧文件函数（只保留最新）
 clean_old_files() {
-    log "开始清理七天前的文件..."
+    log "开始清理旧文件..."
     
     # 检查datiya目录是否存在
     if [ ! -d "$PROJECT_ROOT" ]; then
@@ -48,9 +48,8 @@ clean_old_files() {
         return
     fi
     
-    # 删除七天前的文件
-    # 查找并删除七天前的文件，只删除符合日期格式的文件
-    old_files=$(find "$PROJECT_ROOT" -type f -name "*.txt" -mtime +6)
+    # 删除目录下所有txt文件
+    old_files=$(find "$PROJECT_ROOT" -type f -name "*.txt")
     
     if [ -z "$old_files" ]; then
         log "没有找到需要清理的文件"
@@ -59,7 +58,7 @@ clean_old_files() {
     
     # 统计文件数量
     file_count=$(echo "$old_files" | wc -l)
-    log "找到 $file_count 个七天前的文件，开始清理..."
+    log "找到 $file_count 个旧文件，开始清理..."
     
     # 删除文件
     echo "$old_files" | while read -r file; do
