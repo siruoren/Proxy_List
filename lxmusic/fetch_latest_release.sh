@@ -1,20 +1,17 @@
 #!/bin/bash
 # Fetch the latest release zip from guoyue2010/lxmusic- and extract JS files.
-# Each JS file is saved to the current directory with a sequential number
-# as the filename: 1.js, 2.js, 3.js, ...
+# Each JS file is saved to the current directory, using the value of the @name
+# field found at the top of the file as the filename. Spaces in the name are
+# replaced with '_'.
+#
+#   e.g.  * @name 星澜聚合音源 (StellarWave)   ->  星澜聚合音源_(StellarWave).js
+#
+# Each run replaces the previously generated js files. However, if fetching or
+# extraction fails (no new files obtained), the existing js files are kept
+# untouched so the repo always has a valid set.
 #
 # Usage:
 #   ./fetch_latest_release.sh
-#
-# Behavior:
-#   1. Query the GitHub API for the latest release of guoyue2010/lxmusic-.
-#   2. Pick the zip asset whose name matches the release tag (e.g. V260907.zip).
-#      If that is missing, fall back to the largest .zip asset in the release.
-#   3. Remove any previously generated numbered js files (1.js, 2.js, ...)
-#      in the current directory so stale entries don't accumulate.
-#   4. Extract every *.js file from the zip and copy each one to {N}.js
-#      starting at N=1. Files are sorted by their original (decoded) name
-#      for a stable, deterministic ordering across runs.
 #
 # Note: zip files in this repo are created on Chinese Windows and store
 # filenames in GBK without setting the UTF-8 flag. Python's zipfile module
@@ -28,22 +25,16 @@ OUTPUT_DIR="$(pwd)"
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-# 1. Clean up previously generated numbered js files so stale ones don't linger.
-echo "Cleaning up old numbered js files in $OUTPUT_DIR ..."
-find "$OUTPUT_DIR" -maxdepth 1 -type f -regex '.*/[0-9]+\.js$' -delete
-
-# 2. Fetch latest release metadata from GitHub API.
+# 1. Fetch latest release metadata from GitHub API.
 echo "Fetching latest release info for ${REPO} ..."
 API_RESPONSE=$(curl -sSL --fail \
     -H "Accept: application/vnd.github+json" \
-    "https://api.github.com/repos/${REPO}/releases/latest")
-
-if [ -z "$API_RESPONSE" ]; then
-    echo "Error: Failed to fetch release info from GitHub API." >&2
+    "https://api.github.com/repos/${REPO}/releases/latest") || {
+    echo "Error: Failed to fetch release info from GitHub API. Keeping existing js files." >&2
     exit 1
-fi
+}
 
-# 3. Parse the JSON with python3 (available on macOS and GitHub runners).
+# 2. Parse the JSON with python3.
 #    Prefer the asset named "<tag>.zip"; otherwise pick the largest .zip asset.
 PARSE_RESULT=$(printf '%s' "$API_RESPONSE" | python3 -c '
 import json, sys
@@ -68,33 +59,45 @@ DOWNLOAD_URL=$(printf '%s' "$PARSE_RESULT" | cut -f2)
 echo "Latest release tag: ${TAG_NAME:-<unknown>}"
 
 if [ -z "$DOWNLOAD_URL" ]; then
-    echo "Error: No .zip asset found in release '${TAG_NAME}'." >&2
+    echo "Error: No .zip asset found in release '${TAG_NAME}'. Keeping existing js files." >&2
     exit 1
 fi
 
-# 4. Download the zip.
+# 3. Download the zip.
 echo "Downloading zip: $DOWNLOAD_URL"
 ZIP_FILE="${WORK_DIR}/release.zip"
-curl -sSL --fail -o "$ZIP_FILE" "$DOWNLOAD_URL"
+curl -sSL --fail -o "$ZIP_FILE" "$DOWNLOAD_URL" || {
+    echo "Error: Failed to download zip. Keeping existing js files." >&2
+    exit 1
+}
 
 if ! python3 -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).testzip()' "$ZIP_FILE" 2>/dev/null; then
-    echo "Error: Downloaded file is not a valid zip archive." >&2
+    echo "Error: Downloaded file is not a valid zip archive. Keeping existing js files." >&2
     exit 1
 fi
 
-# 5. Extract JS files using Python's zipfile (handles GBK filenames correctly).
+# 4. Extract JS files, parse @name from each, then (only on success) delete old
+#    js files and write the new ones. All in one Python process so that a
+#    failure at any step leaves the existing files untouched.
 echo ""
-echo "Extracting JS files and saving as 1.js, 2.js, ..."
-ZIP_FILE="$ZIP_FILE" OUTPUT_DIR="$OUTPUT_DIR" python3 <<'PYEOF'
+echo "Extracting JS files and parsing @name ..."
+
+if ! ZIP_FILE="$ZIP_FILE" OUTPUT_DIR="$OUTPUT_DIR" python3 <<'PYEOF'
 import os
+import re
 import sys
 import zipfile
 
 zip_path = os.environ["ZIP_FILE"]
 out_dir = os.environ["OUTPUT_DIR"]
 
+# Matches "@name <value>" and captures the value (rest of line, minus trailing
+# whitespace). MULTILINE so ^/$ match per line; . does not cross newlines.
+name_re = re.compile(r'@name\s+(.+?)\s*$', re.MULTILINE)
+
 with zipfile.ZipFile(zip_path) as z:
-    files = []
+    # --- Collect every *.js entry, decoding GBK filenames when needed ---
+    files = []  # list of (decoded_name, ZipInfo)
     for info in z.infolist():
         if info.is_dir():
             continue
@@ -104,9 +107,9 @@ with zipfile.ZipFile(zip_path) as z:
         # de-facto encoding used by Chinese Windows zip tools.
         if not (info.flag_bits & 0x800):
             try:
-                raw = info.orig_filename if isinstance(info.orig_filename, bytes) \
+                raw_bytes = info.orig_filename if isinstance(info.orig_filename, bytes) \
                     else info.filename.encode("cp437")
-                name = raw.decode("gbk")
+                name = raw_bytes.decode("gbk")
             except Exception:
                 pass  # fall back to whatever Python already gave us
         if not name.lower().endswith(".js"):
@@ -117,20 +120,76 @@ with zipfile.ZipFile(zip_path) as z:
     files.sort(key=lambda x: x[0])
 
     if not files:
-        print("Warning: No .js files found in the zip.", file=sys.stderr)
-        sys.exit(0)
+        print("No .js files found in the zip. Keeping existing js files.", file=sys.stderr)
+        sys.exit(1)
 
-    idx = 0
-    for name, info in files:
-        idx += 1
-        target = os.path.join(out_dir, f"{idx}.js")
-        with z.open(info) as src, open(target, "wb") as dst:
-            while True:
-                chunk = src.read(65536)
-                if not chunk:
-                    break
-                dst.write(chunk)
-        print(f"  [{idx}] {os.path.basename(name)} -> {idx}.js")
+    # --- Parse @name from each file and build target filenames ---
+    targets = []  # list of (original_basename, target_filename, content_bytes)
+    used_names = set()
 
-    print(f"\nDone. Saved {idx} js file(s) to {out_dir}")
+    for decoded_name, info in files:
+        with z.open(info) as f:
+            content = f.read()
+
+        # Decode text for @name search (js files are typically utf-8)
+        try:
+            text = content.decode('utf-8', errors='replace')
+        except Exception:
+            text = content.decode('gbk', errors='replace')
+
+        # Search @name in the first 50 lines (header comment block is at top)
+        head = '\n'.join(text.split('\n')[:50])
+        m = name_re.search(head)
+
+        orig_basename = os.path.basename(decoded_name)
+        if m:
+            base = m.group(1).strip()
+        else:
+            # Fallback: use the original filename (without extension) if no @name
+            base = os.path.splitext(orig_basename)[0]
+            print(f"  Warning: no @name found in {orig_basename}, using filename as fallback",
+                  file=sys.stderr)
+
+        # Sanitize: replace spaces with _ (explicit requirement), plus other
+        # characters that are illegal in filenames across OSes.
+        base = base.replace(' ', '_')
+        for ch in '\\/:*?"<>|':
+            base = base.replace(ch, '_')
+        base = base.strip().strip('._')
+        if not base:
+            base = os.path.splitext(orig_basename)[0]
+
+        target = f"{base}.js"
+        # Dedupe: if name already used, append _2, _3, ...
+        if target in used_names:
+            i = 2
+            while f"{base}_{i}.js" in used_names:
+                i += 1
+            target = f"{base}_{i}.js"
+        used_names.add(target)
+        targets.append((orig_basename, target, content))
+
+    # --- Only now (success) delete old js files in the output directory ---
+    deleted = 0
+    for existing in os.listdir(out_dir):
+        if existing.lower().endswith('.js'):
+            try:
+                os.remove(os.path.join(out_dir, existing))
+                deleted += 1
+            except OSError as e:
+                print(f"Warning: could not remove {existing}: {e}", file=sys.stderr)
+
+    # --- Write new files ---
+    print(f"Deleted {deleted} old js file(s). Writing {len(targets)} new file(s):")
+    for orig_basename, target, content in targets:
+        out_path = os.path.join(out_dir, target)
+        with open(out_path, 'wb') as f:
+            f.write(content)
+        print(f"  {orig_basename} -> {target}")
+
+    print(f"\nDone. Saved {len(targets)} js file(s) to {out_dir}")
 PYEOF
+then
+    echo "Error: Failed to extract or parse files. Keeping existing js files." >&2
+    exit 1
+fi
