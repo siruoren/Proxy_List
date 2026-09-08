@@ -95,6 +95,26 @@ out_dir = os.environ["OUTPUT_DIR"]
 # whitespace). MULTILINE so ^/$ match per line; . does not cross newlines.
 name_re = re.compile(r'@name\s+(.+?)\s*$', re.MULTILINE)
 
+# Pattern matching emoji / pictographic "icon" characters that should be
+# removed from the @name value before it is used as a filename.
+# NOTE: we intentionally do NOT include mathematical alphanumeric symbols
+# (1D400-1D7FF) here — those are stylized *letters*, not pictures, and
+# stripping them turns disguised text like "𝖧ello 𝖶orld" into garbage.
+emoji_re = re.compile(
+    "["  # the join of the ranges below in one character class
+    "\U0001F300-\U0001FAFF"  # symbols & pictographs, supplemental, extended-A
+    "\U0001F600-\U0001F64F"  # emoticons
+    "\U0001F680-\U0001F6FF"  # transport & map symbols
+    "\U00002600-\U000027BF"  # misc symbols + dingbats
+    "\U0001F1E6-\U0001F1FF"  # regional indicator (flag letters)
+    "\U0001F900-\U0001F9FF"  # supplemental symbols & pictographs
+    "\u2700-\u27bf"          # dingbats
+    "\uFE00-\uFE0F"          # variation selectors
+    "\u2600-\u26FF"          # misc symbols
+    "]+",
+    flags=re.UNICODE,
+)
+
 with zipfile.ZipFile(zip_path) as z:
     # --- Collect every *.js entry, decoding GBK filenames when needed ---
     files = []  # list of (decoded_name, ZipInfo)
@@ -149,6 +169,19 @@ with zipfile.ZipFile(zip_path) as z:
             base = os.path.splitext(orig_basename)[0]
             print(f"  Warning: no @name found in {orig_basename}, using filename as fallback",
                   file=sys.stderr)
+
+        # Strip emoji / pictographic / symbol characters (icons) from the name.
+        # Covers: emoticons, misc symbols & pictographs, transport/map,
+        # supplemental symbols & pictographs, dingbats, regional flags,
+        # variation selectors (FE00-FE0F), and mathematical alphanumeric
+        # symbols (1D400-1D7FF) that are used as decorative "icons".
+        name_before_strip = base
+        base = emoji_re.sub('', base)
+        if base != name_before_strip:
+            print(f"  Stripped icons from name: {name_before_strip!r} -> {base!r}",
+                  file=sys.stderr)
+        # Collapse whitespace that may have been left by removed icons.
+        base = re.sub(r'\s+', ' ', base).strip()
 
         # Sanitize: replace spaces with _ (explicit requirement), plus other
         # characters that are illegal in filenames across OSes.
