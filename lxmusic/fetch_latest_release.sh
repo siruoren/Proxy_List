@@ -6,9 +6,14 @@
 #
 #   e.g.  * @name 星澜聚合音源 (StellarWave)   ->  星澜聚合音源_(StellarWave).js
 #
-# Each run replaces the previously generated js files. However, if fetching or
-# extraction fails (no new files obtained), the existing js files are kept
-# untouched so the repo always has a valid set.
+# Update policy (per user requirement "只更本地重名的js，其他的保留"):
+#   - Files whose @name matches an existing local file  -> overwrite (update)
+#   - Files in the new release that don't exist locally  -> add (write new)
+#   - Local files not present in the new release          -> kept untouched
+# In short: nothing is ever deleted; new release files are written on top of
+# whatever is already there, so same-name files get refreshed and brand-new
+# sources get added, while sources that have been dropped from upstream stay.
+# If fetching or extraction fails, the existing js files are kept untouched.
 #
 # Usage:
 #   ./fetch_latest_release.sh
@@ -76,9 +81,10 @@ if ! python3 -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).testzip()' "$
     exit 1
 fi
 
-# 4. Extract JS files, parse @name from each, then (only on success) delete old
-#    js files and write the new ones. All in one Python process so that a
-#    failure at any step leaves the existing files untouched.
+# 4. Extract JS files, parse @name from each, then write them on top of the
+#    existing files. Nothing is deleted: same-name files are refreshed, new
+#    files are added, and local files absent from the release are kept.
+#    All in one Python process so that a failure leaves existing files untouched.
 echo ""
 echo "Extracting JS files and parsing @name ..."
 
@@ -202,25 +208,24 @@ with zipfile.ZipFile(zip_path) as z:
         used_names.add(target)
         targets.append((orig_basename, target, content))
 
-    # --- Only now (success) delete old js files in the output directory ---
-    deleted = 0
-    for existing in os.listdir(out_dir):
-        if existing.lower().endswith('.js'):
-            try:
-                os.remove(os.path.join(out_dir, existing))
-                deleted += 1
-            except OSError as e:
-                print(f"Warning: could not remove {existing}: {e}", file=sys.stderr)
-
-    # --- Write new files ---
-    print(f"Deleted {deleted} old js file(s). Writing {len(targets)} new file(s):")
+    # --- Write new files on top of existing ones. Nothing is deleted. ---
+    # Same-name files are overwritten (refreshed); files new to this release
+    # are created; local files absent from this release are left as-is.
+    updated = 0
+    added = 0
+    print(f"Processing {len(targets)} file(s) from release (no deletions):")
     for orig_basename, target, content in targets:
         out_path = os.path.join(out_dir, target)
+        action = "updated" if os.path.exists(out_path) else "added"
         with open(out_path, 'wb') as f:
             f.write(content)
-        print(f"  {orig_basename} -> {target}")
+        if action == "updated":
+            updated += 1
+        else:
+            added += 1
+        print(f"  [{action}] {orig_basename} -> {target}")
 
-    print(f"\nDone. Saved {len(targets)} js file(s) to {out_dir}")
+    print(f"\nDone. updated={updated}, added={added} in {out_dir}")
 PYEOF
 then
     echo "Error: Failed to extract or parse files. Keeping existing js files." >&2
