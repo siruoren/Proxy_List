@@ -240,8 +240,8 @@ fi
 
 # 5. Generate lx_list.txt — one raw GitHub download URL per js file in the
 #    current directory, one entry per line. The URL base is derived from the
-#    git "origin" remote (or GITHUB_REPOSITORY in CI) so the list points at
-#    the files committed in this very repo.
+#    git "origin" remote (or GITHUB_REPOSITORY in CI) and the file path is the
+#    repo-relative path (so subdirectory prefixes like "lxmusic/" are included).
 echo ""
 echo "Generating lx_list.txt ..."
 
@@ -275,14 +275,20 @@ if [ -z "$RAW_BASE" ]; then
         find "$OUTPUT_DIR" -maxdepth 1 -type f -name '*.js' -exec basename {} \; | sort
     } > "$LIST_FILE"
 else
+    # Use git ls-files to get the correct repo-relative path for each js file
+    # in the current directory. This ensures subdirectory prefixes (e.g.
+    # "lxmusic/") are included so the generated URLs actually resolve.
+    GIT_ROOT="$(git -C "$OUTPUT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
     {
-        # find outputs the absolute path; we strip OUTPUT_DIR/ prefix to get the
-        # repo-relative path, then join it onto RAW_BASE.
         find "$OUTPUT_DIR" -maxdepth 1 -type f -name '*.js' -print \
             | while IFS= read -r js_path; do
-                rel="${js_path#$OUTPUT_DIR/}"
-                # URL-encode spaces (and a few other reserved chars) in the path
-                # so the list is a valid URL per line.
+                if [ -n "$GIT_ROOT" ]; then
+                    rel="${js_path#$GIT_ROOT/}"
+                else
+                    rel="${js_path#$OUTPUT_DIR/}"
+                fi
+                # URL-encode the path so special chars like [ ] ( ) spaces etc.
+                # produce a valid URL per line.
                 encoded="$(printf '%s' "$rel" | python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.stdin.read().rstrip(chr(10))))')"
                 printf '%s/%s\n' "$RAW_BASE" "$encoded"
             done
