@@ -248,7 +248,7 @@ echo "Generating lx_list.txt ..."
 RAW_BASE=""
 if [ -n "${GITHUB_REPOSITORY:-}" ]; then
     # GitHub Actions sets GITHUB_REPOSITORY="owner/repo"
-    RAW_BASE="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+    RAW_BASE="https://ghfast.top/https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
 else
     ORIGIN_URL="$(git -C "$OUTPUT_DIR" config --get remote.origin.url 2>/dev/null || true)"
     if [ -n "$ORIGIN_URL" ]; then
