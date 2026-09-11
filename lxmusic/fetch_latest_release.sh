@@ -262,7 +262,7 @@ else
             -e 's#\.git$##')"
         BRANCH="$(git -C "$OUTPUT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
         [ -n "$BRANCH" ] || BRANCH="main"
-        RAW_BASE="https://raw.githubusercontent.com/${REPO_SLUG}/${BRANCH}"
+        RAW_BASE="https://ghfast.top/https://raw.githubusercontent.com/${REPO_SLUG}/${BRANCH}"
     fi
 fi
 
