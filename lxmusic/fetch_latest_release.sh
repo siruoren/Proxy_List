@@ -15,6 +15,12 @@
 # sources get added, while sources that have been dropped from upstream stay.
 # If fetching or extraction fails, the existing js files are kept untouched.
 #
+# After the update, lx_list.txt is (re)generated in the current directory. It
+# contains the raw GitHub download URL of every *.js file found there, one
+# per line. The URL base is derived from the git "origin" remote (or the
+# GITHUB_REPOSITORY env var in CI) so the list points at the files in this
+# very repo.
+#
 # Usage:
 #   ./fetch_latest_release.sh
 #
@@ -231,3 +237,57 @@ then
     echo "Error: Failed to extract or parse files. Keeping existing js files." >&2
     exit 1
 fi
+
+# 5. Generate lx_list.txt — one raw GitHub download URL per js file in the
+#    current directory, one entry per line. The URL base is derived from the
+#    git "origin" remote (or GITHUB_REPOSITORY in CI) so the list points at
+#    the files committed in this very repo.
+echo ""
+echo "Generating lx_list.txt ..."
+
+RAW_BASE=""
+if [ -n "${GITHUB_REPOSITORY:-}" ]; then
+    # GitHub Actions sets GITHUB_REPOSITORY="owner/repo"
+    RAW_BASE="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+else
+    ORIGIN_URL="$(git -C "$OUTPUT_DIR" config --get remote.origin.url 2>/dev/null || true)"
+    if [ -n "$ORIGIN_URL" ]; then
+        # Normalize ssh/git+ssh URLs and https URLs to "owner/repo".
+        #   git@github.com:owner/repo.git     -> owner/repo
+        #   https://github.com/owner/repo.git -> owner/repo
+        REPO_SLUG="$(printf '%s' "$ORIGIN_URL" | sed -E \
+            -e 's#^git@github\.com:##' \
+            -e 's#^https?://github\.com/##' \
+            -e 's#^git\+https?://github\.com/##' \
+            -e 's#\.git$##')"
+        BRANCH="$(git -C "$OUTPUT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+        [ -n "$BRANCH" ] || BRANCH="main"
+        RAW_BASE="https://raw.githubusercontent.com/${REPO_SLUG}/${BRANCH}"
+    fi
+fi
+
+LIST_FILE="${OUTPUT_DIR}/lx_list.txt"
+if [ -z "$RAW_BASE" ]; then
+    echo "Warning: could not determine GitHub remote. Writing bare filenames to lx_list.txt." >&2
+    # Without a known remote, still produce a list of relative js filenames so
+    # the file is not empty and the user can post-process it.
+    {
+        find "$OUTPUT_DIR" -maxdepth 1 -type f -name '*.js' -exec basename {} \; | sort
+    } > "$LIST_FILE"
+else
+    {
+        # find outputs the absolute path; we strip OUTPUT_DIR/ prefix to get the
+        # repo-relative path, then join it onto RAW_BASE.
+        find "$OUTPUT_DIR" -maxdepth 1 -type f -name '*.js' -print \
+            | while IFS= read -r js_path; do
+                rel="${js_path#$OUTPUT_DIR/}"
+                # URL-encode spaces (and a few other reserved chars) in the path
+                # so the list is a valid URL per line.
+                encoded="$(printf '%s' "$rel" | python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.stdin.read().rstrip(chr(10))))')"
+                printf '%s/%s\n' "$RAW_BASE" "$encoded"
+            done
+    } | sort > "$LIST_FILE"
+fi
+
+LIST_COUNT=$(wc -l < "$LIST_FILE" | tr -d ' ')
+echo "Wrote ${LIST_COUNT} entries to ${LIST_FILE}"
