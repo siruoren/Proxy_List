@@ -10,7 +10,7 @@ mkdir -p ${PROJECT_ROOT}
 # 日期信息
 TODAY=$(date +%Y%m%d)
 # 下载URL
-DOWNLOAD_URL="https://free.datiya.com/uploads/${TODAY}-clash.yaml"
+DOWNLOAD_URL="https://free.com/uploads/${TODAY}-clash.yaml"
 # 临时文件
 TEMP_FILE="$SCRIPT_DIR/${TODAY}-clash.yaml"
 # 输出文件（固定文件名，只保留最新）
