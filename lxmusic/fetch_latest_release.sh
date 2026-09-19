@@ -15,7 +15,7 @@
 # sources get added, while sources that have been dropped from upstream stay.
 # If fetching or extraction fails, the existing js files are kept untouched.
 #
-# After the update, lx_list.txt is (re)generated in the current directory. It
+# After the update, lx_repos_list.txt is (re)generated in the current directory. It
 # contains the raw GitHub download URL of every *.js file found there, one
 # per line. The URL base is derived from the git "origin" remote (or the
 # GITHUB_REPOSITORY env var in CI) so the list points at the files in this
@@ -238,12 +238,12 @@ then
     exit 1
 fi
 
-# 5. Generate lx_list.txt — one raw GitHub download URL per js file in the
+# 5. Generate lx_repos_list.txt — one raw GitHub download URL per js file in the
 #    current directory, one entry per line. The URL base is derived from the
 #    git "origin" remote (or GITHUB_REPOSITORY in CI) and the file path is the
 #    repo-relative path (so subdirectory prefixes like "lxmusic/" are included).
 echo ""
-echo "Generating lx_list.txt ..."
+echo "Generating lx_repos_list.txt ..."
 
 RAW_BASE=""
 if [ -n "${GITHUB_REPOSITORY:-}" ]; then
@@ -266,9 +266,9 @@ else
     fi
 fi
 
-LIST_FILE="${OUTPUT_DIR}/lx_list.txt"
+LIST_FILE="${OUTPUT_DIR}/lx_repos_list.txt"
 if [ -z "$RAW_BASE" ]; then
-    echo "Warning: could not determine GitHub remote. Writing bare filenames to lx_list.txt." >&2
+    echo "Warning: could not determine GitHub remote. Writing bare filenames to lx_repos_list.txt." >&2
     # Without a known remote, still produce a list of relative js filenames so
     # the file is not empty and the user can post-process it.
     {
