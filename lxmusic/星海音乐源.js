@@ -1,43 +1,35 @@
 /*!
- * @name 星海音乐源
- * @description GDAPI | 聚合 | ChKSz API | 全平台支持24FLAC，网易、酷狗、QQ最高支持母带
- * @version v3.2.14
- * @Update  1，优化kw；2，中秋国庆节快乐；3，过渡版本
- * @author 万去了了
- * @homepage 
- https://zrcdy.dpdns.org
- https://yy.zddyr.top/
- https://yy.zddyr.top/web
- * @lastUpdate 2026-09-26
- * @md5
+ * @name         星海音乐源
+ * @description  GDAPI | 聚合 | ChKSz API | 全平台支持 24bit FLAC，网易、酷狗、QQ 最高支持母带
+ * @version      v3.2.15
+ * @author       万去了了 / 科学大魔王
+ * @homepage     https://zddyr.top/
+ * @see          http://gc.kxwa.top/
+ * @lastUpdate   2026-10-02
+ * @update       1. 新增汽水音乐支持（测试）；2. 感谢科学大魔王的技术支持；3. 国庆快乐
+ * @license      仅供学习交流，请支持正版
  */
 
 const { EVENT_NAMES, request, on, send, env } = globalThis.lx;
 
 // ==================== 用户配置区域 ====================
-// https://github.com/cdyUuu/kuwo-music-relay
-// 酷我代理解密配置（用于解密酷我加密无损格式，如 mflac/mgg）
-// 填入你自行部署的代理解密地址，留空则不启用代理解密
 const KW_DECRYPT_PROXY = {
-    url: '',                 // 在此填入代理解密地址（如 https://your-domain.com/decrypt.php），留空则不启用
-    allowEncryptedLossless: false, // 设为 true 启用代理解密
+    url: '',
+    allowEncryptedLossless: false,
     urlParamName: 'url',
     ekeyParamName: 'ekey',
 };
 
-// ChKSz API 配置（网易SVIP接口 + QQ音乐接口，需要 apikey）
-// 启用且 apikey 不为空时，对应平台优先使用 chksz 接口
 const CHKSZ_CONFIG = {
-    apikey: '',              // 在此填入 chksz 的 apikey，留空则不启用 chksz 接口
-    enableNetease: true,     // 启用 chksz 网易云 SVIP 接口（支持到母带）
-    enableQQ: true,          // 启用 chksz QQ 音乐接口（支持到 master）
+    apikey: '',
+    enableNetease: true,
+    enableQQ: true,
 };
 
-// 酷我本地直连配置
 const KW_LOCAL_CONFIG = {
-    enabled: true,           // 酷我是否使用本地直连（false 则走自建后端）
-    strictHighEnd: true,     // 高端音质严格校验（bitrate/格式），不满足则继续尝试
-    fallbackToBackend: true, // 本地全部失败后是否回退自建后端
+    enabled: true,
+    strictHighEnd: true,
+    fallbackToBackend: true,
 };
 // ====================================================
 
@@ -75,36 +67,30 @@ const buildUrl = (domainKey, pathKey, extraQuery = '') => {
     return url;
 };
 
-const SCRIPT_VERSION = 'v3.2.14';
+const SCRIPT_VERSION = 'v3.2.15';
 const SCRIPT_NAME = 'XingHaiMusicSource';
-const SOURCE_MAP = { tx: 'qq', mg: 'migu', kw: 'kw', kg: 'kg' };
-const PLATFORM_NAMES = { wy: '网易云音乐', tx: 'QQ音乐', kw: '酷我音乐', kg: '酷狗音乐', mg: '咪咕音乐' };
+const SOURCE_MAP = { tx: 'qq', mg: 'migu', kw: 'kw', kg: 'kg', qs: 'qs' };
+const PLATFORM_NAMES = { wy: '网易云音乐', tx: 'QQ音乐', kw: '酷我音乐', kg: '酷狗音乐', mg: '咪咕音乐', qs: '汽水音乐' };
 const MUSIC_QUALITIES = {
     wy: ['128k','320k','flac','hires','atmos','master'],
     tx: ['128k','192k','320k','flac','hires','atmos','atmos_plus','master'],
     kw: ['128k','320k','flac','hires','atmos','master'],
     kg: ['128k','320k','flac','hires','atmos','master'],
-    mg: ['128k','320k','flac']
+    mg: ['128k','320k','flac'],
+    qs: ['128k','320k','flac','spatial','hires']
 };
 
-// ChKSz 网易云 level 映射
 const CHKSZ_NETEASE_LEVEL_MAP = {
-    '128k': 'standard',
-    '320k': 'exhigh',
-    'flac': 'lossless',
-    'hires': 'hires',
-    'atmos': 'jymaster',
-    'master': 'jymaster'
+    '128k': 'standard', '320k': 'exhigh', 'flac': 'lossless',
+    'hires': 'hires', 'atmos': 'jymaster', 'master': 'jymaster'
 };
 
-// ChKSz QQ 音质 size 映射
 const CHKSZ_QQ_SIZE_MAP = {
     '128k': '128k', '192k': '320k', '320k': '320k',
     'flac': 'flac', 'hires': 'hires',
     'atmos': 'master', 'atmos_plus': 'master', 'master': 'master'
 };
 
-// GD API 音质映射
 const GD_BR_MAP = { '128k':'128', '320k':'320', 'flac':'740', 'hires':'999' };
 const GD_SUPPORTED_QUALITIES = new Set(['128k','320k','flac','hires']);
 
@@ -124,7 +110,6 @@ const KW_UA_MOBI = 'okhttp/3.10.0';
 const KW_UA_WEB = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 const KW_TIMEOUT = 15000;
 
-// 酷我音质配置（移植自 kw_vip.py）
 const KW_QUALITIES = {
     '128k':  { br: '128kmp3',    format: 'mp3',   desc: '标准 128k',      min_kbps: 96,   max_kbps: 192,  target_kbps: 128 },
     '192k':  { br: '192kmp3',    format: 'mp3',   desc: '中品 192k',      min_kbps: 161,  max_kbps: 255,  target_kbps: 192 },
@@ -141,25 +126,17 @@ const KW_QUALITIES = {
     'jymaster': { br: '28000kzlmaster', format: 'mgg', desc: '臻品母带极致(加密mgg)', min_kbps: 24000, max_kbps: 32000, target_kbps: 28000 },
 };
 
-// 音质别名
 const KW_QUALITIES_ALIAS = {
     'atmos+': 'atmos_plus', 'atmosplus': 'atmos_plus', 'atmos2': 'atmos_plus',
     'sur+': 'atmos_plus',
     'zp+': 'jymaster', 'zpplus': 'jymaster', 'zp2': 'jymaster',
 };
 
-// 插件音质 → 酷我本地音质 key 的映射
-// 插件暴露的 kw 音质: 128k, 320k, flac, hires, atmos, master
 const KW_PLUGIN_TO_LOCAL = {
-    '128k': '128k',
-    '320k': '320k',
-    'flac': 'flac',
-    'hires': 'hires',
-    'atmos': 'atmos',
-    'master': 'master',
+    '128k': '128k', '320k': '320k', 'flac': 'flac',
+    'hires': 'hires', 'atmos': 'atmos', 'master': 'master',
 };
 
-// BR 降级链
 const KW_BR_CHAIN = {
     '128k':  ['128kmp3'],
     '192k':  ['192kmp3', '128kmp3'],
@@ -181,7 +158,6 @@ const KW_LOSSLESS_FMTS = new Set(['flac','mgg','mflac']);
 const KW_ENCRYPTED_FMTS = new Set(['mgg','mflac']);
 const KW_HIGH_END = new Set(['hires','hifi','master','atmos','zp','zpga','sur','atmos_plus','jymaster']);
 
-// 渠道配置（三阶段）
 const KW_CHANNELS_PREMIUM = [
     { name: 'car_conv2', url: 'http://anymatch.kuwo.cn/mobi.s', type: 'convert_url2', source: 'kwplayercar_ar_6.0.0.9_B_jiakong_vh.apk' },
     { name: 'mobi_conv2', url: 'http://mobi.kuwo.cn/mobi.s', type: 'convert_url2', source: 'kwplayer_ar_8.5.5.0_apk_keluze.apk' },
@@ -195,7 +171,6 @@ const KW_CHANNELS_FALLBACK = [
     { name: 'sign_mobi_http', url: 'http://mobi.kuwo.cn/mobi.s', type: 'convert_url_with_sign', source: 'kwplayer_ar_8.5.5.0_apk_keluze.apk' },
 ];
 
-// 酷我直链缓存
 const kwUrlCache = new Map();
 const KW_CACHE_TTL = 30 * 60 * 1000;
 
@@ -311,10 +286,15 @@ const httpFetch = (url, options = {}) => new Promise((resolve, reject) => {
 });
 
 function mapQuality(target, avail) {
-    const pm = { '臻品母带': 'jymaster', '臻品音质2.0': 'sky', '臻品音质AI': 'jyeffect', '臻品音质': 'jyeffect', 'Hires 无损24-Bit': 'hires', 'Hi-Res': 'hires', 'FLAC': 'flac', '320k': '320k', '192k': '192k', '128k': '128k' };
+    const pm = {
+        '臻品母带': 'jymaster', '臻品音质2.0': 'sky', '臻品音质AI': 'jyeffect',
+        '臻品音质': 'jyeffect', 'Hires 无损24-Bit': 'hires', 'Hi-Res': 'hires',
+        'FLAC': 'flac', '320k': '320k', '192k': '192k', '128k': '128k',
+        '空间音频': 'spatial', 'Spatial': 'spatial'
+    };
     if (avail.includes(target)) return target;
     const m = pm[target]; if (m && avail.includes(m)) return m;
-    const order = ['jymaster', 'sky', 'jyeffect', 'hires', 'flac24bit', 'master', 'flac', '320k', '192k', '128k'];
+    const order = ['jymaster', 'sky', 'jyeffect', 'hires', 'flac24bit', 'spatial', 'master', 'flac', '320k', '192k', '128k'];
     for (const q of order) if (avail.includes(q)) return q;
     return avail[0] || '128k';
 }
@@ -425,7 +405,6 @@ function kwParseBrEntry(brStr, defaultFmt) {
     return { br: brStr, format: fmt };
 }
 
-// 酷我专用 HTTP 请求（直连官方域名，noAuth）
 const kwHttpFetch = (url, options = {}) => new Promise((resolve, reject) => {
     const headers = { 'User-Agent': KW_UA_MOBI, ...(options.headers || {}) };
     request(url, { ...options, headers, timeout: options.timeout || KW_TIMEOUT }, (err, resp) => {
@@ -434,7 +413,6 @@ const kwHttpFetch = (url, options = {}) => new Promise((resolve, reject) => {
     });
 });
 
-// 尝试单个酷我渠道
 async function kwTryChannel(ch, rid, qCfg) {
     let info = null;
     let rawResp = null;
@@ -494,7 +472,6 @@ async function kwTryChannel(ch, rid, qCfg) {
 
     if (!info) return null;
 
-    // 深度 ekey 提取
     let ekeyFinal = info.ekey || '';
     if (!ekeyFinal) {
         const urlEk = kwExtractEkeyFromUrl(info.url);
@@ -509,7 +486,6 @@ async function kwTryChannel(ch, rid, qCfg) {
     return info;
 }
 
-// 酷我 HEAD 预检 Content-Length
 async function kwGetContentLength(url) {
     try {
         const resp = await kwHttpFetch(url, { method: 'HEAD', timeout: 8000 });
@@ -519,17 +495,10 @@ async function kwGetContentLength(url) {
     return null;
 }
 
-// 酷我歌词 + 封面获取
 async function kwGetExtra(rid) {
     const result = {
-        lrc: '',
-        lrc_line: [],
-        album: '',
-        album_id: '',
-        artist: '',
-        song_name: '',
-        album_pic: '',
-        artist_pic: '',
+        lrc: '', lrc_line: [], album: '', album_id: '',
+        artist: '', song_name: '', album_pic: '', artist_pic: '',
     };
     if (!rid) return result;
 
@@ -564,7 +533,6 @@ async function kwGetExtra(rid) {
             result.lrc = lines.join('\n');
         }
 
-        // 专辑图
         const picRaw = String(songinfo.pic || '').trim();
         if (picRaw) {
             let u = picRaw;
@@ -573,7 +541,6 @@ async function kwGetExtra(rid) {
             result.album_pic = u;
         }
 
-        // 歌手图
         const artistId = String(songinfo.artistId || '0');
         if (artistId && artistId !== '0') {
             const a = artistId.length >= 2 ? artistId[artistId.length - 2] : '0';
@@ -587,7 +554,6 @@ async function kwGetExtra(rid) {
     return result;
 }
 
-// 酷我主获取函数（多渠道 + 阶段调度 + 严格校验）
 async function kwGetUrlLocal(rid, quality, durationSec) {
     const localQ = KW_PLUGIN_TO_LOCAL[quality] || kwResolveQuality(quality);
     if (!KW_QUALITIES[localQ]) throw new Error(`酷我不支持音质: ${quality}`);
@@ -671,15 +637,10 @@ async function kwGetUrlLocal(rid, quality, durationSec) {
                 if (wantLossless && !KW_LOSSLESS_FMTS.has(fmt)) continue;
 
                 const result = {
-                    url: info.url,
-                    format: fmt,
-                    br: info.br,
-                    br_req: brStr,
-                    ekey: info.ekey || '',
-                    stage: stageName,
+                    url: info.url, format: fmt, br: info.br,
+                    br_req: brStr, ekey: info.ekey || '', stage: stageName,
                 };
 
-                // 阶段A 严格高端校验
                 if (doStrict) {
                     const wantFmt = kwNormalizeFmt(qCfg.format);
                     if (KW_ENCRYPTED_FMTS.has(wantFmt) && !KW_ENCRYPTED_FMTS.has(fmt)) {
@@ -687,7 +648,6 @@ async function kwGetUrlLocal(rid, quality, durationSec) {
                         continue;
                     }
 
-                    // bitrate 验证
                     let brVal = null;
                     try {
                         const brRaw = info.br;
@@ -702,7 +662,6 @@ async function kwGetUrlLocal(rid, quality, durationSec) {
                         continue;
                     }
 
-                    // HEAD 预检
                     if (durationSec && durationSec > 0) {
                         const cl = await kwGetContentLength(info.url);
                         if (cl) {
@@ -717,7 +676,6 @@ async function kwGetUrlLocal(rid, quality, durationSec) {
                     }
                 }
 
-                // 优先带 ekey 的结果
                 if (result.ekey) {
                     if (!bestEkeyResult) {
                         bestEkeyResult = [result, ch.name];
@@ -749,7 +707,6 @@ async function fetchIp() {
     } catch (e) {}
 }
 
-// ChKSz 网易云 SVIP 接口
 async function getWyChkszUrl(id, quality) {
     const level = CHKSZ_NETEASE_LEVEL_MAP[quality];
     if (!level) throw new Error('chksz不支持该品质');
@@ -761,7 +718,6 @@ async function getWyChkszUrl(id, quality) {
     return { url: resp.body.data.url, lyric: null, cover: resp.body.data.picUrl || null };
 }
 
-// ChKSz QQ 音乐接口
 async function getTxChkszUrl(musicInfo, quality) {
     const size = CHKSZ_QQ_SIZE_MAP[quality];
     if (!size) throw new Error('chksz不支持该品质');
@@ -775,7 +731,6 @@ async function getTxChkszUrl(musicInfo, quality) {
     return { url: resp.body.url, lyric: resp.body.lrc || null, cover: resp.body.cover || null };
 }
 
-// 网易 GD 接口
 async function getWyGDUrl(id, q) {
     const br = GD_BR_MAP[q] || '320';
     const url = buildUrl('gdStudio', 'gdApi', `&${URL_CONFIG.gdParams}&types=url&source=netease&id=${id}&br=${br}`);
@@ -822,8 +777,30 @@ async function getUrlFromBackend(source, musicInfo, quality) {
     }
 
     if (resp.statusCode !== 200) throw new Error(`后端接口状态${resp.statusCode}`);
+
     const data = resp.body;
-    if (data.code !== 200 || !data.url) throw new Error(data.msg || '后端无可用链接');
+    if (data.code !== 200) throw new Error(data.msg || '后端无可用链接');
+
+    // 汽水音乐专用分支 —— 抖音加密流
+    if (backendSource === 'qs') {
+        const d = data.data || {};
+        let streamUrl = d.url || '';
+
+        if (streamUrl && d.key && !/[?&]key=/.test(streamUrl)) {
+            streamUrl += (streamUrl.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(d.key);
+        }
+
+        if (!streamUrl) streamUrl = d.source_url || '';
+        if (!streamUrl) throw new Error('汽水后端未返回流媒体链接');
+
+        return {
+            url: streamUrl,
+            lyric: d.lyric || d.lrc || null,
+            cover: d.cover || d.picture || d.album_pic || null,
+        };
+    }
+
+    if (!data.url) throw new Error(data.msg || '后端无可用链接');
     const finalUrl = processKwEncryptedUrl(data, backendSource);
     return { url: finalUrl, lyric: data.lrc || null, cover: data.picture || null };
 }
@@ -842,30 +819,24 @@ async function fetchMusicUrl(source, musicInfo, quality) {
     let lastError = '';
     const chkszEnabled = !!(CHKSZ_CONFIG.apikey && CHKSZ_CONFIG.apikey.trim());
 
-    // --- 酷我音乐：本地直连优先，后端兜底 ---
+    // --- 酷我音乐 ---
     if (source === 'kw') {
         if (KW_LOCAL_CONFIG.enabled) {
             try {
                 const durationSec = musicInfo.interval ? parseInt(musicInfo.interval, 10) : null;
                 const kwResult = await kwGetUrlLocal(id, actualQuality, durationSec);
                 if (kwResult && kwResult.url) {
-                    // 处理加密链接（代理解密）
                     let finalUrl = kwResult.url;
                     if (KW_DECRYPT_PROXY.allowEncryptedLossless && KW_ENCRYPTED_FMTS.has(kwResult.format)) {
                         finalUrl = processKwEncryptedUrl({ url: kwResult.url, ekey: kwResult.ekey }, 'kw');
                     }
-                    result = {
-                        url: finalUrl,
-                        lyric: kwResult.lrc || null,
-                        cover: kwResult.album_pic || null,
-                    };
+                    result = { url: finalUrl, lyric: kwResult.lrc || null, cover: kwResult.album_pic || null };
                 }
             } catch (e) {
                 lastError = `酷我本地直连失败: ${e.message}`;
             }
         }
 
-        // 本地失败/未启用 → 自建后端兜底
         if (!result.url && KW_LOCAL_CONFIG.fallbackToBackend && !backendAggBlocked) {
             try {
                 result = await getUrlFromBackend('kw', musicInfo, actualQuality);
@@ -914,7 +885,15 @@ async function fetchMusicUrl(source, musicInfo, quality) {
             } catch (e) { lastError = `后端失败: ${e.message}`; }
         }
     }
-    // --- 其他平台：自建后端 ---
+    // --- 汽水音乐 ---
+    else if (source === 'qs') {
+        try {
+            result = await getUrlFromBackend('qs', musicInfo, actualQuality);
+        } catch (e) {
+            lastError = `汽水后端失败: ${e.message}`;
+        }
+    }
+    // --- 其他平台 ---
     else {
         try {
             result = await getUrlFromBackend(source, musicInfo, actualQuality);
@@ -969,10 +948,10 @@ on(EVENT_NAMES.request, async ({ action, source, info }) => {
     deviceId = generateDeviceId();
     clientHeader = buildClientHeader();
     userToken = generateToken(null);
-    availablePlatforms = ['wy', 'tx', 'kg', 'kw', 'mg'];
+    availablePlatforms = ['wy', 'tx', 'kg', 'kw', 'mg', 'qs'];
     const sources = {};
     availablePlatforms.forEach(p => { sources[p] = { name: PLATFORM_NAMES[p], type: 'music', actions: ['musicUrl', 'lyric', 'pic'], qualitys: MUSIC_QUALITIES[p] }; });
-    send(EVENT_NAMES.inited, { openDevTools: false, status: true, sources });
+    send(EVENT_NAMES.inited, { openDevMode: false, status: true, sources });
     fetchIp();
     checkUpdate();
 })();
