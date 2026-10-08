@@ -21,5 +21,6 @@ https://wget.la/https://raw.githubusercontent.com/siruoren/Proxy_List/main/lxmus
 https://wget.la/https://raw.githubusercontent.com/siruoren/Proxy_List/main/lxmusic/%E9%9D%9E%E5%B8%B8%E5%88%80.js
 https://wget.la/https://raw.githubusercontent.com/siruoren/Proxy_List/main/lxmusic/%F0%9D%96%A7%E0%B1%BF%E1%A5%A3%E1%A5%A3%F0%9D%97%88_%D4%9C%F0%9D%97%88%F0%9D%97%8B%E1%A5%A3%E1%91%AF.js
 https://wget.la/https://raw.githubusercontent.com/siruoren/Proxy_List/main/lxmusic/HYWmusic_%E5%85%AC%E7%9B%8A%E7%89%88.js
+https://wget.la/https://raw.githubusercontent.com/siruoren/Proxy_List/main/lxmusic/HYWmusic_%E5%85%AC%E7%9B%8A%E7%89%88_2.js
 https://wget.la/https://raw.githubusercontent.com/siruoren/Proxy_List/main/lxmusic/gdstudio%E9%9F%B3%E4%B9%90%E6%BA%90.js
 https://wget.la/https://raw.githubusercontent.com/siruoren/Proxy_List/main/lxmusic/lx-%E7%8E%89%E5%AE%81%E7%86%99-Pro.js
