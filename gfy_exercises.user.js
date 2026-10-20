@@ -7,8 +7,8 @@
 // @match        https://app.goodfull.vip/v2.0/knowledge/**
 // @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
 // @grant        none
-// @updateURL    http://__UPDATE_URL__/gfy_exercises.user.js
-// @downloadURL  http://__UPDATE_URL__/gfy_exercises.user.js
+// @updateURL    https://ghfast.top/https://raw.githubusercontent.com/siruoren/Proxy_List/main/gfy_exercises.user.js
+// @downloadURL  https://ghfast.top/https://raw.githubusercontent.com/siruoren/Proxy_List/main/gfy_exercises.user.js
 // ==/UserScript==
 
 (function() {
