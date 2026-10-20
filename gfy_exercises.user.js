@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         gfy_exercises
 // @namespace    http://tampermonkey.net/
-// @version      2026.10.20
+// @version      2026.10.20.1
 // @description  一键复制所有题目、选项及已勾选（✅）的选项框状态
 // @author       You
 // @match        https://app.goodfull.vip/v2.0/knowledge/**
@@ -36,15 +36,26 @@
         return !!item.querySelector('.van-radio__icon--checked, .van-checkbox__icon--checked');
     }
 
+    // 按题目块拆分：每道题在独立的 question-content[id^="answer-"] 块里，
+    // question-main 只是外层容器（内含全部题目），不能按它拆题
+    function getQuestionBlocks() {
+        let blocks = [...document.querySelectorAll('.question-content[id^="answer-"]')];
+        if (blocks.length === 0) {
+            blocks = [...document.querySelectorAll('.question-main')];
+        }
+        return blocks;
+    }
+
     // 获取单个题目的文本：题干 + 各选项（✅ 标记已勾选）+ 答案行
-    function getQuestionText(mainEl) {
-        const subject = mainEl.querySelector('.question-subject');
-        let text = subject ? getNestedText(subject) : getNestedText(mainEl);
+    function getQuestionText(blockEl) {
+        // 题干取 question-title；不能用 question-subject（其中嵌有选项和作答结果标签）
+        const title = blockEl.querySelector('.question-title') || blockEl.querySelector('.question-subject');
+        let text = title ? getNestedText(title) : getNestedText(blockEl);
 
         // 选项：Vant 的 radio/checkbox 外层元素带 role 属性，找不到时兜底用类名
-        let options = mainEl.querySelectorAll('[role="radio"], [role="checkbox"]');
+        let options = blockEl.querySelectorAll('[role="radio"], [role="checkbox"]');
         if (options.length === 0) {
-            options = mainEl.querySelectorAll('.van-radio, .van-checkbox');
+            options = blockEl.querySelectorAll('.van-radio, .van-checkbox');
         }
 
         const answers = [];
@@ -62,13 +73,11 @@
 
     // 获取所有题目文本
     function getAllQuestionsText() {
-        const elements = document.getElementsByClassName('question-main');
-        if (elements.length === 0) return '';
-        let allText = '';
-        for (let i = 0; i < elements.length; i++) {
-            allText += `【第${i + 1}题】${getQuestionText(elements[i])}\n\n`;
-        }
-        return allText.trim();
+        const blocks = getQuestionBlocks();
+        if (blocks.length === 0) return '';
+        return blocks
+            .map((el, i) => `【第${i + 1}题】${getQuestionText(el)}`)
+            .join('\n\n');
     }
 
     // 按钮状态提示
