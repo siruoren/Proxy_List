@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         gfy_exercises
 // @namespace    http://tampermonkey.net/
-// @version      2026.10.20.1
+// @version      2026.10.20.1112
 // @description  一键复制所有题目、选项及已勾选（✅）的选项框状态
 // @author       You
 // @match        https://app.goodfull.vip/v2.0/knowledge/**
