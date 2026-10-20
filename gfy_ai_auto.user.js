@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         gfy_ai_auto
 // @namespace    http://tampermonkey.net/
-// @version      2026.10.20.4
-// @description  接入豆包自动答题：收集题目→豆包作答→自动勾选；豆包未登录时自动提示并提供登录链接
+// @version      2026.10.20.5
+// @description  接入豆包自动答题：收集题目→豆包作答→自动勾选；不检测登录状态，未登录时持续重试，登录后自动继续
 // @author       You
 // @match        https://app.goodfull.vip/v2.0/knowledge/**
 // @match        https://www.doubao.com/*
@@ -169,24 +169,6 @@
             setTimeout(() => d.remove(), 4000);
         }
 
-        function showLoginPanel() {
-            if (document.getElementById('gfy-ai-login')) return;
-            const d = document.createElement('div');
-            d.id = 'gfy-ai-login';
-            d.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:999999;'
-                + 'background:#fff3e0;color:#b26a00;border:1px solid #ffb74d;border-radius:8px;'
-                + 'padding:12px 16px;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.15);'
-                + 'display:flex;gap:12px;align-items:center;';
-            d.innerHTML = '<span>豆包未登录：已在新标签页打开豆包登录，本页面不会刷新、答题进度不丢失，登录成功后脚本自动获取会话并继续。</span>'
-                + `<a href="${DOUBAO_URL}" target="_blank" style="color:#1976d2;text-decoration:none;white-space:nowrap;">打开豆包登录</a>`;
-            document.body.appendChild(d);
-        }
-
-        function hideLoginPanel() {
-            const d = document.getElementById('gfy-ai-login');
-            if (d) d.remove();
-        }
-
         function mountButton() {
             aiBtn = document.createElement('button');
             aiBtn.id = 'gfy-ai-btn';
@@ -207,15 +189,12 @@
                 if (!remote || !nv) return;
                 const s = safeParse(nv, null);
                 if (!s) return;
-                hideLoginPanel();
                 showToast(`已获取豆包会话并保存（${new Date(s.ts).toLocaleTimeString()}），自动继续答题`);
                 aiBtn.textContent = '豆包会话已就绪';
             });
 
-            // 持续跟踪豆包标签页状态：每 1.5s 轮询存储（心跳 + 状态 + 答案），
-            // 即使跨标签页事件丢失也能恢复正确显示；豆包页每 2s 写入一次心跳。
-            // “未登录”需连续 3 次轮询命中才显示，避免多标签页心跳交替导致误报
-            let unauthCount = 0;
+            // 持续跟踪豆包标签页状态：每 1.5s 轮询存储（心跳 + 答案）。
+            // 不检测登录状态：未登录时豆包页持续重试，登录后自动继续
             setInterval(() => {
                 if (!running) return;
                 const st = safeParse(GM_getValue(KEY_STATUS, ''), null);
@@ -223,23 +202,12 @@
                 if (ans && ans.reqId === currentReqId) applyAnswers(ans);
                 const fresh = st && Date.now() - (st.ts || 0) < 10000;
                 if (!fresh) {
-                    unauthCount = 0;
                     aiBtn.textContent = '未检测到豆包页面，请确认弹窗未被拦截';
                     return;
                 }
-                if (st.state === 'unauthenticated') {
-                    unauthCount++;
-                    if (unauthCount >= 3) {
-                        showLoginPanel();
-                        aiBtn.textContent = '豆包未登录，请在豆包标签页登录';
-                    }
-                } else if (st.state === 'ready') {
-                    unauthCount = 0;
-                    hideLoginPanel();
-                    const hasAns = ans && ans.reqId === currentReqId
-                        && Object.keys(ans.answers || {}).length > 0;
-                    if (!hasAns) aiBtn.textContent = '豆包已就绪，正在发送题目…';
-                }
+                const hasAns = ans && ans.reqId === currentReqId
+                    && Object.keys(ans.answers || {}).length > 0;
+                if (!hasAns) aiBtn.textContent = '豆包页面已就绪，正在发送题目…';
             }, 1500);
         }
 
@@ -288,14 +256,11 @@
             GM_setValue(KEY_STATUS, JSON.stringify({ reqId, state, ts: Date.now() }));
         }
 
-        // 心跳：独立于答题流程持续写入，答题中也不会中断，
-        // 避免答题期间心跳停止被题目页误判为未登录/页面丢失
+        // 心跳：独立于答题流程持续写入，答题中也不会中断。
+        // 不检测登录状态，始终上报就绪，由答题流程自行重试
         setInterval(() => {
             const req = safeParse(GM_getValue(KEY_REQ, ''), null);
-            const ta = findInput();
-            const authed = !!ta && location.pathname.indexOf('login') === -1;
-            setStatus(req ? req.reqId : 0, authed ? 'ready' : 'unauthenticated');
-            if (!authed) showBanner('豆包未登录：请在本标签页登录，登录后自动继续（题目页面不会刷新）');
+            setStatus(req ? req.reqId : 0, 'ready');
         }, 2000);
 
         function showBanner(text) {
@@ -381,7 +346,7 @@
         // 发送一批题目并等待答案
         async function answerChunk(reqId, chunk, idx, accumulated) {
             const ta = findInput();
-            if (!ta) throw new Error('未找到豆包输入框');
+            if (!ta) throw new Error('未找到豆包输入框（可能未登录或页面未加载完成），将持续重试');
             const mark = `【gfy-${reqId}-${idx}】`;
             const countBefore = findReplies().length;
             fillInput(ta, buildPrompt(chunk, reqId, idx));
@@ -449,21 +414,24 @@
             return session;
         }
 
-        // 主循环：仅负责抓取会话并认领处理请求；登录状态与心跳由上方独立循环维护
+        // 主循环：不检测登录状态，持续认领处理请求；未登录时发送失败会不断重试，
+        // 登录成功后自动继续。会话在输入框可用时抓取保存
         async function boot() {
             for (;;) {
-                const ta = findInput();
                 const req = safeParse(GM_getValue(KEY_REQ, ''), null);
-                const authed = !!ta && location.pathname.indexOf('login') === -1;
-                if (authed) {
-                    captureSession(req ? req.reqId : 0);
-                    if (req && !busy) await processRequest();
-                    if (!req) showBanner('已登录：豆包会话已保存。脚本待命：请在题目页面点击「AI 自动答题」');
-                    else if (!busy) showBanner('已登录：豆包会话已保存。脚本待命：等待新任务');
-                    await sleep(2000);
-                } else {
-                    await sleep(3000);
+                if (req && !busy) {
+                    await processRequest();
+                } else if (!req) {
+                    if (findInput()) {
+                        captureSession(0);
+                        showBanner('已登录：豆包会话已保存。脚本待命：请在题目页面点击「AI 自动答题」');
+                    } else {
+                        showBanner('脚本待命：等待题目页面任务（未登录也可答题，登录后效果更佳）');
+                    }
+                } else if (!busy) {
+                    showBanner('已登录：豆包会话已保存。脚本待命：等待新任务');
                 }
+                await sleep(2000);
             }
         }
         boot();
