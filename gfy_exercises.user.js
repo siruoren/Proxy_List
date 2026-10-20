@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         gfy_exercises
 // @namespace    http://tampermonkey.net/
-// @version      2026.10.20.1116
+// @version      2026.10.20.1117
 // @description  一键复制所有题目、选项及作答判定结果
 // @author       You
 // @match        https://app.goodfull.vip/v2.0/knowledge/**
@@ -27,6 +27,12 @@
             }
         }
         return text.trim();
+    }
+
+    // 获取选项框的勾选状态：优先看 aria-checked，其次看 icon 的 --checked 类
+    function isChecked(item) {
+        if (item.getAttribute('aria-checked') === 'true') return true;
+        return !!item.querySelector('.van-radio__icon--checked, .van-checkbox__icon--checked');
     }
 
     // 按题目块拆分：每道题在独立的 question-content[id^="answer-"] 块里，
@@ -59,7 +65,9 @@
         options.forEach(opt => {
             const label = opt.querySelector('.van-radio__label, .van-checkbox__label') || opt;
             const line = getNestedText(label);
-            if (line) lines.push(line);
+            if (!line) return;
+            // ✅ 标记已勾选的选项
+            lines.push(`${isChecked(opt) ? '✅ ' : ''}${line}`);
         });
         if (lines.length > 0) text += `\n${lines.join('\n')}`;
 
