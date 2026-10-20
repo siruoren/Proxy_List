@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         gfy_ai_auto
 // @namespace    http://tampermonkey.net/
-// @version      2026.10.20.2
+// @version      2026.10.20.3
 // @description  接入豆包自动答题：收集题目→豆包作答→自动勾选；豆包未登录时自动提示并提供登录链接
 // @author       You
 // @match        https://app.goodfull.vip/v2.0/knowledge/**
@@ -151,9 +151,12 @@
                 });
             });
             const done = Object.keys(answers).length;
-            aiBtn.textContent = done >= (data.total || qs.length)
-                ? `完成 ${done}/${data.total}，已自动选择`
-                : `AI 答题中 ${done}/${data.total}`;
+            if (done >= (data.total || qs.length)) {
+                aiBtn.textContent = `完成 ${done}/${data.total}，已自动选择`;
+                running = false; // 允许再次点击重新运行
+            } else {
+                aiBtn.textContent = `AI 答题中 ${done}/${data.total}`;
+            }
         }
 
         function showToast(text) {
@@ -194,14 +197,7 @@
             aiBtn.addEventListener('click', onAiClick);
             document.body.appendChild(aiBtn);
 
-            // 监听豆包页回传的状态与答案
-            GM_addValueChangeListener(KEY_STATUS, (k, o, nv, remote) => {
-                if (!remote || !nv) return;
-                const st = safeParse(nv, null);
-                if (!st || st.reqId !== currentReqId) return;
-                if (st.state === 'unauthenticated') { showLoginPanel(); aiBtn.textContent = '豆包未登录'; }
-                if (st.state === 'ready') { hideLoginPanel(); aiBtn.textContent = '豆包已就绪，发送题目…'; }
-            });
+            // 监听豆包页回传的答案与会话（状态改由下方轮询持续跟踪，避免事件丢失）
             GM_addValueChangeListener(KEY_ANS, (k, o, nv, remote) => {
                 if (!remote || !nv) return;
                 applyAnswers(safeParse(nv, null));
@@ -215,6 +211,29 @@
                 showToast(`已获取豆包会话并保存（${new Date(s.ts).toLocaleTimeString()}），自动继续答题`);
                 aiBtn.textContent = '豆包会话已就绪';
             });
+
+            // 持续跟踪豆包标签页状态：每 1.5s 轮询存储（心跳 + 状态 + 答案），
+            // 即使跨标签页事件丢失也能恢复正确显示；豆包页每 2~3s 写入一次心跳
+            setInterval(() => {
+                if (!running) return;
+                const st = safeParse(GM_getValue(KEY_STATUS, ''), null);
+                const ans = safeParse(GM_getValue(KEY_ANS, ''), null);
+                if (ans && ans.reqId === currentReqId) applyAnswers(ans);
+                const fresh = st && Date.now() - (st.ts || 0) < 10000;
+                if (!fresh) {
+                    aiBtn.textContent = '未检测到豆包页面，请确认弹窗未被拦截';
+                    return;
+                }
+                if (st.state === 'unauthenticated') {
+                    showLoginPanel();
+                    aiBtn.textContent = '豆包未登录，请在豆包标签页登录';
+                } else if (st.state === 'ready') {
+                    hideLoginPanel();
+                    const hasAns = ans && ans.reqId === currentReqId
+                        && Object.keys(ans.answers || {}).length > 0;
+                    if (!hasAns) aiBtn.textContent = '豆包已就绪，正在发送题目…';
+                }
+            }, 1500);
         }
 
         function onAiClick() {
@@ -229,17 +248,8 @@
             GM_setValue(KEY_REQ, JSON.stringify({ reqId: currentReqId, questions: plain }));
             GM_setValue(KEY_ANS, JSON.stringify({ reqId: currentReqId, answers: {}, progress: 0, total: qs.length }));
             aiBtn.textContent = '等待豆包页面…';
-            window.open(DOUBAO_URL, '_blank');
-
-            // 45 秒无任何响应则提示
-            setTimeout(() => {
-                const st = safeParse(GM_getValue(KEY_STATUS, ''), null);
-                const answered = safeParse(GM_getValue(KEY_ANS, '{}'), {});
-                if (running && (!st || st.reqId !== currentReqId) && (!answered.answers || !Object.keys(answered.answers).length)) {
-                    aiBtn.textContent = '未检测到豆包响应，请确认豆包页面已打开';
-                    running = false;
-                }
-            }, 45000);
+            // 命名窗口：已打开豆包标签页时复用，不重复开新 tab
+            window.open(DOUBAO_URL, 'gfy_doubao_tab');
         }
 
         function init() {
@@ -264,7 +274,8 @@
         let banner = null;
 
         function setStatus(reqId, state) {
-            GM_setValue(KEY_STATUS, JSON.stringify({ reqId, state }));
+            // 每次写入都带心跳时间戳，题目页据此判断豆包标签页是否存活
+            GM_setValue(KEY_STATUS, JSON.stringify({ reqId, state, ts: Date.now() }));
         }
 
         function showBanner(text) {
