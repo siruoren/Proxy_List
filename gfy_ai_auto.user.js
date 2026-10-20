@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         gfy_ai_auto
 // @namespace    http://tampermonkey.net/
-// @version      2026.10.20.5
+// @version      2026.10.20.6
 // @description  接入豆包自动答题：收集题目→豆包作答→自动勾选；不检测登录状态，未登录时持续重试，登录后自动继续
 // @author       You
 // @match        https://app.goodfull.vip/v2.0/knowledge/**
@@ -33,7 +33,6 @@
 
     // 豆包页面选择器（站点改版时可在此调整）
     const DOUBAO_SEL = {
-        input: ['textarea[data-testid="chat_input_input"]', 'textarea'],
         send: ['button[data-testid="chat_input_send_button"]', 'button[class*="send"]'],
         stop: ['button[data-testid="chat_input_stop_button"]'],
         reply: ['[data-testid="receive_message"]', '[data-testid="message_message_content"]', '.markdown-body'],
@@ -274,7 +273,31 @@
             banner.textContent = text;
         }
 
-        function findInput() { return qsel(DOUBAO_SEL.input); }
+        // 输入框检测：豆包在会话开始后可能把输入区从 textarea 切换为 contenteditable，
+        // 两种形态都匹配，且只取页面中可见的元素
+        function findInput() {
+            const cands = document.querySelectorAll(
+                'textarea[data-testid="chat_input_input"],'
+                + '[data-testid="chat_input_input"][contenteditable="true"],'
+                + 'textarea, div[contenteditable="true"]'
+            );
+            for (const el of cands) {
+                if (el.offsetParent !== null && el.getBoundingClientRect().height > 10) return el;
+            }
+            return null;
+        }
+
+        // 等待输入框出现：SPA 渲染或会话切换瞬间输入框可能暂时消失
+        async function waitForInput(timeout) {
+            const start = Date.now();
+            for (;;) {
+                const ta = findInput();
+                if (ta) return ta;
+                if (Date.now() - start > timeout) return null;
+                await sleep(500);
+            }
+        }
+
         function findSend() { return qsel(DOUBAO_SEL.send); }
         function findReplies() { return qselAll(DOUBAO_SEL.reply); }
 
@@ -345,7 +368,7 @@
 
         // 发送一批题目并等待答案
         async function answerChunk(reqId, chunk, idx, accumulated) {
-            const ta = findInput();
+            const ta = await waitForInput(15000);
             if (!ta) throw new Error('未找到豆包输入框（可能未登录或页面未加载完成），将持续重试');
             const mark = `【gfy-${reqId}-${idx}】`;
             const countBefore = findReplies().length;
