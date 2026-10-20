@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         gfy_exercises
 // @namespace    http://tampermonkey.net/
-// @version      2026.10.20.1112
+// @version      2026.10.20.1113
 // @description  一键复制所有题目、选项及已勾选（✅）的选项框状态
 // @author       You
 // @match        https://app.goodfull.vip/v2.0/knowledge/**
@@ -37,9 +37,13 @@
     }
 
     // 按题目块拆分：每道题在独立的 question-content[id^="answer-"] 块里，
-    // question-main 只是外层容器（内含全部题目），不能按它拆题
+    // question-main 只是外层容器（内含全部题目），不能按它拆题。
+    // 首次打开（未作答）页面可能没有 answer-N 编号，逐级兜底到任意 question-content
     function getQuestionBlocks() {
         let blocks = [...document.querySelectorAll('.question-content[id^="answer-"]')];
+        if (blocks.length === 0) {
+            blocks = [...document.querySelectorAll('.question-content')];
+        }
         if (blocks.length === 0) {
             blocks = [...document.querySelectorAll('.question-main')];
         }
@@ -58,15 +62,21 @@
             options = blockEl.querySelectorAll('.van-radio, .van-checkbox');
         }
 
+        const lines = [];
         const answers = [];
         options.forEach(opt => {
             const label = opt.querySelector('.van-radio__label, .van-checkbox__label') || opt;
             const line = getNestedText(label);
             if (!line) return;
-            const checked = isChecked(opt);
-            text += `\n${checked ? '✅' : '　'} ${line}`;
-            if (checked) answers.push(line);
+            if (isChecked(opt)) {
+                answers.push(line);
+                lines.push(`✅ ${line}`);
+            } else {
+                lines.push(line);
+            }
         });
+        if (lines.length > 0) text += `\n${lines.join('\n')}`;
+        // 未作答（无勾选项）时不输出答案行，仅复制题干与选项
         if (answers.length > 0) text += `\n【答案】${answers.join(' ／ ')}`;
         return text;
     }
