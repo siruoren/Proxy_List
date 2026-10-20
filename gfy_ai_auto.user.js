@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         gfy_ai_auto
 // @namespace    http://tampermonkey.net/
-// @version      2026.10.20.3
+// @version      2026.10.20.4
 // @description  接入豆包自动答题：收集题目→豆包作答→自动勾选；豆包未登录时自动提示并提供登录链接
 // @author       You
 // @match        https://app.goodfull.vip/v2.0/knowledge/**
@@ -213,7 +213,9 @@
             });
 
             // 持续跟踪豆包标签页状态：每 1.5s 轮询存储（心跳 + 状态 + 答案），
-            // 即使跨标签页事件丢失也能恢复正确显示；豆包页每 2~3s 写入一次心跳
+            // 即使跨标签页事件丢失也能恢复正确显示；豆包页每 2s 写入一次心跳。
+            // “未登录”需连续 3 次轮询命中才显示，避免多标签页心跳交替导致误报
+            let unauthCount = 0;
             setInterval(() => {
                 if (!running) return;
                 const st = safeParse(GM_getValue(KEY_STATUS, ''), null);
@@ -221,13 +223,18 @@
                 if (ans && ans.reqId === currentReqId) applyAnswers(ans);
                 const fresh = st && Date.now() - (st.ts || 0) < 10000;
                 if (!fresh) {
+                    unauthCount = 0;
                     aiBtn.textContent = '未检测到豆包页面，请确认弹窗未被拦截';
                     return;
                 }
                 if (st.state === 'unauthenticated') {
-                    showLoginPanel();
-                    aiBtn.textContent = '豆包未登录，请在豆包标签页登录';
+                    unauthCount++;
+                    if (unauthCount >= 3) {
+                        showLoginPanel();
+                        aiBtn.textContent = '豆包未登录，请在豆包标签页登录';
+                    }
                 } else if (st.state === 'ready') {
+                    unauthCount = 0;
                     hideLoginPanel();
                     const hasAns = ans && ans.reqId === currentReqId
                         && Object.keys(ans.answers || {}).length > 0;
@@ -237,19 +244,21 @@
         }
 
         function onAiClick() {
-            if (running) return;
             const qs = parseQuestions();
             if (!qs.length) { alert('未找到题目，请确认已进入答题页面'); return; }
-            if (!confirm(`已解析 ${qs.length} 道题，将打开豆包页面自动作答并勾选，继续？`)) return;
+            const msg = running
+                ? '当前任务进行中，将新建豆包标签页重新开始答题，继续？'
+                : `已解析 ${qs.length} 道题，将打开豆包页面自动作答并勾选，继续？`;
+            if (!confirm(msg)) return;
             running = true;
             window.__gfyQs = qs;
             currentReqId = Date.now();
             const plain = qs.map(q => { const { el, ...rest } = q; return rest; });
-            GM_setValue(KEY_REQ, JSON.stringify({ reqId: currentReqId, questions: plain }));
+            GM_setValue(KEY_REQ, JSON.stringify({ reqId: currentReqId, questions: plain, claimed: null }));
             GM_setValue(KEY_ANS, JSON.stringify({ reqId: currentReqId, answers: {}, progress: 0, total: qs.length }));
             aiBtn.textContent = '等待豆包页面…';
-            // 命名窗口：已打开豆包标签页时复用，不重复开新 tab
-            window.open(DOUBAO_URL, 'gfy_doubao_tab');
+            // 唯一窗口名：豆包标签页卡住或被手动关闭后，再次点击按钮即可强制新开一个答题标签页
+            window.open(DOUBAO_URL, 'gfy_doubao_tab_' + currentReqId);
         }
 
         function init() {
@@ -272,11 +281,22 @@
         let lastReqId = null;
         let busy = false;
         let banner = null;
+        const TAB_TOKEN = Math.random().toString(36).slice(2); // 本标签页认领标记
 
         function setStatus(reqId, state) {
             // 每次写入都带心跳时间戳，题目页据此判断豆包标签页是否存活
             GM_setValue(KEY_STATUS, JSON.stringify({ reqId, state, ts: Date.now() }));
         }
+
+        // 心跳：独立于答题流程持续写入，答题中也不会中断，
+        // 避免答题期间心跳停止被题目页误判为未登录/页面丢失
+        setInterval(() => {
+            const req = safeParse(GM_getValue(KEY_REQ, ''), null);
+            const ta = findInput();
+            const authed = !!ta && location.pathname.indexOf('login') === -1;
+            setStatus(req ? req.reqId : 0, authed ? 'ready' : 'unauthenticated');
+            if (!authed) showBanner('豆包未登录：请在本标签页登录，登录后自动继续（题目页面不会刷新）');
+        }, 2000);
 
         function showBanner(text) {
             if (!banner) {
@@ -376,14 +396,20 @@
             });
         }
 
-        // 处理新请求：分批发送，逐批合并答案并回传
+        // 处理新请求：分批发送，逐批合并答案并回传；
+        // 通过 claimed 标记认领，多个豆包标签页打开时只有一个作答
         async function processRequest() {
             const req = safeParse(GM_getValue(KEY_REQ, ''), null);
             if (!req || !req.questions || req.reqId === lastReqId) return;
-            lastReqId = req.reqId;
+            if (req.claimed && req.claimed !== TAB_TOKEN) return; // 已被其他标签页认领
             busy = true;
-            const accumulated = {};
             try {
+                if (!req.claimed) {
+                    req.claimed = TAB_TOKEN;
+                    GM_setValue(KEY_REQ, JSON.stringify(req));
+                }
+                lastReqId = req.reqId;
+                const accumulated = {};
                 const chunks = [];
                 for (let i = 0; i < req.questions.length; i += CHUNK_SIZE) {
                     chunks.push(req.questions.slice(i, i + CHUNK_SIZE));
@@ -400,8 +426,14 @@
                 }
                 showBanner(`自动答题完成，共 ${req.questions.length} 题，已回传`);
             } catch (e) {
-                showBanner(`自动答题出错：${e.message}，请回到题目页面重新点击按钮`);
-                lastReqId = null; // 允许重试同一请求
+                showBanner(`自动答题出错：${e.message}`);
+                // 释放认领，允许本标签页或其他标签页重试
+                const cur = safeParse(GM_getValue(KEY_REQ, ''), null);
+                if (cur && cur.reqId === req.reqId) {
+                    cur.claimed = null;
+                    GM_setValue(KEY_REQ, JSON.stringify(cur));
+                }
+                lastReqId = null;
             }
             busy = false;
         }
@@ -417,8 +449,7 @@
             return session;
         }
 
-        // 主循环：检测登录状态 -> 就绪后自动抓取会话并处理请求
-        // 题目页不刷新：登录、会话更新均通过 GM 存储跨标签页同步
+        // 主循环：仅负责抓取会话并认领处理请求；登录状态与心跳由上方独立循环维护
         async function boot() {
             for (;;) {
                 const ta = findInput();
@@ -426,14 +457,11 @@
                 const authed = !!ta && location.pathname.indexOf('login') === -1;
                 if (authed) {
                     captureSession(req ? req.reqId : 0);
-                    setStatus(req ? req.reqId : 0, 'ready');
                     if (req && !busy) await processRequest();
                     if (!req) showBanner('已登录：豆包会话已保存。脚本待命：请在题目页面点击「AI 自动答题」');
                     else if (!busy) showBanner('已登录：豆包会话已保存。脚本待命：等待新任务');
                     await sleep(2000);
                 } else {
-                    setStatus(req ? req.reqId : 0, 'unauthenticated');
-                    showBanner('豆包未登录：请在本标签页登录，登录后自动继续（题目页面不会刷新）');
                     await sleep(3000);
                 }
             }
