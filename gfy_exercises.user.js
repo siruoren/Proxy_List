@@ -1,0 +1,140 @@
+// ==UserScript==
+// @name         gfy_exercises
+// @namespace    http://tampermonkey.net/
+// @version      2026.10.20
+// @description  一键复制所有题目、选项及已勾选（✅）的选项框状态
+// @author       You
+// @match        https://app.goodfull.vip/v2.0/knowledge/**
+// @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
+// @grant        none
+// @updateURL    http://__UPDATE_URL__/gfy_exercises.user.js
+// @downloadURL  http://__UPDATE_URL__/gfy_exercises.user.js
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    const BTN_ID = 'gfy-copy-btn';
+
+    // 递归获取元素及其所有子元素的文本
+    function getNestedText(element) {
+        let text = '';
+        for (let node of element.childNodes) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                text += node.textContent.trim() + ' ';
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                text += getNestedText(node);
+            }
+        }
+        return text.trim();
+    }
+
+    // 获取选项框的勾选状态：优先看 aria-checked，其次看 icon 的 --checked 类
+    // 命中 <div class="van-radio__icon ... van-radio__icon--checked"> 或 checkbox 同理
+    function isChecked(item) {
+        if (item.getAttribute('aria-checked') === 'true') return true;
+        return !!item.querySelector('.van-radio__icon--checked, .van-checkbox__icon--checked');
+    }
+
+    // 获取单个题目的文本：题干 + 各选项（✅ 标记已勾选）+ 答案行
+    function getQuestionText(mainEl) {
+        const subject = mainEl.querySelector('.question-subject');
+        let text = subject ? getNestedText(subject) : getNestedText(mainEl);
+
+        // 选项：Vant 的 radio/checkbox 外层元素带 role 属性，找不到时兜底用类名
+        let options = mainEl.querySelectorAll('[role="radio"], [role="checkbox"]');
+        if (options.length === 0) {
+            options = mainEl.querySelectorAll('.van-radio, .van-checkbox');
+        }
+
+        const answers = [];
+        options.forEach(opt => {
+            const label = opt.querySelector('.van-radio__label, .van-checkbox__label') || opt;
+            const line = getNestedText(label);
+            if (!line) return;
+            const checked = isChecked(opt);
+            text += `\n${checked ? '✅' : '　'} ${line}`;
+            if (checked) answers.push(line);
+        });
+        if (answers.length > 0) text += `\n【答案】${answers.join(' ／ ')}`;
+        return text;
+    }
+
+    // 获取所有题目文本
+    function getAllQuestionsText() {
+        const elements = document.getElementsByClassName('question-main');
+        if (elements.length === 0) return '';
+        let allText = '';
+        for (let i = 0; i < elements.length; i++) {
+            allText += `【第${i + 1}题】${getQuestionText(elements[i])}\n\n`;
+        }
+        return allText.trim();
+    }
+
+    // 按钮状态提示
+    function flashButton(btn, message, color) {
+        const original = btn.textContent;
+        btn.textContent = message;
+        btn.style.backgroundColor = color;
+        setTimeout(() => {
+            btn.textContent = original;
+            btn.style.backgroundColor = '#409eff';
+        }, 2000);
+    }
+
+    // 复制文本，clipboard 失败时回退到 execCommand
+    function copyText(text) {
+        return navigator.clipboard.writeText(text).catch(() => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        });
+    }
+
+    // 创建一键复制按钮
+    function createCopyButton() {
+        const btn = document.createElement('button');
+        btn.id = BTN_ID;
+        btn.textContent = '一键复制所有题目';
+        Object.assign(btn.style, {
+            position: 'fixed',
+            top: '10px',
+            right: '10px',
+            zIndex: '99999',
+            padding: '8px 16px',
+            backgroundColor: '#409eff',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+        });
+        btn.addEventListener('click', () => {
+            const text = getAllQuestionsText();
+            if (!text) {
+                flashButton(btn, '未找到题目', '#f56c6c');
+                return;
+            }
+            copyText(text).then(() => {
+                flashButton(btn, '复制成功！', '#67c23a');
+            }).catch(() => {
+                flashButton(btn, '复制失败', '#f56c6c');
+            });
+        });
+        return btn;
+    }
+
+    function mountButton() {
+        if (document.body && !document.getElementById(BTN_ID)) {
+            document.body.appendChild(createCopyButton());
+        }
+    }
+
+    // SPA 页面 DOM 可能被框架重绘，监听 body 子节点变化并重新挂载按钮
+    mountButton();
+    new MutationObserver(mountButton).observe(document.body, { childList: true });
+})();
