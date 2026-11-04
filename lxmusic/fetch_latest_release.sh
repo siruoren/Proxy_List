@@ -1,8 +1,8 @@
 #!/bin/bash
 # Fetch the latest release zip from guoyue2010/lxmusic- and extract JS files.
-# Each JS file is saved to the current directory, using the value of the @name
-# field found at the top of the file as the filename. Spaces in the name are
-# replaced with '_'.
+# Each source is saved as Base64 text in a .js file, using the value of the
+# original source's @name field as the filename. Spaces in the name are
+# replaced with '_'. The generated files must be Base64-decoded before use.
 #
 #   e.g.  * @name 星澜聚合音源 (StellarWave)   ->  星澜聚合音源_(StellarWave).js
 #
@@ -87,14 +87,16 @@ if ! python3 -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).testzip()' "$
     exit 1
 fi
 
-# 4. Extract JS files, parse @name from each, then write them on top of the
-#    existing files. Nothing is deleted: same-name files are refreshed, new
-#    files are added, and local files absent from the release are kept.
+# 4. Extract JS files, parse @name from each original source, Base64-encode
+#    the source, then write the encoded content on top of existing files.
+#    Nothing is deleted: same-name files are refreshed, new files are added,
+#    and local files absent from the release are kept.
 #    All in one Python process so that a failure leaves existing files untouched.
 echo ""
-echo "Extracting JS files and parsing @name ..."
+echo "Extracting JS files, parsing @name, and Base64-encoding source content ..."
 
 if ! ZIP_FILE="$ZIP_FILE" OUTPUT_DIR="$OUTPUT_DIR" python3 <<'PYEOF'
+import base64
 import os
 import re
 import sys
@@ -156,7 +158,7 @@ with zipfile.ZipFile(zip_path) as z:
         sys.exit(1)
 
     # --- Parse @name from each file and build target filenames ---
-    targets = []  # list of (original_basename, target_filename, content_bytes)
+    targets = []  # list of (original_basename, target_filename, base64_content)
     used_names = set()
 
     for decoded_name, info in files:
@@ -212,19 +214,19 @@ with zipfile.ZipFile(zip_path) as z:
                 i += 1
             target = f"{base}_{i}.js"
         used_names.add(target)
-        targets.append((orig_basename, target, content))
+        targets.append((orig_basename, target, base64.b64encode(content)))
 
-    # --- Write new files on top of existing ones. Nothing is deleted. ---
+    # --- Write Base64 text on top of existing files. Nothing is deleted. ---
     # Same-name files are overwritten (refreshed); files new to this release
     # are created; local files absent from this release are left as-is.
     updated = 0
     added = 0
     print(f"Processing {len(targets)} file(s) from release (no deletions):")
-    for orig_basename, target, content in targets:
+    for orig_basename, target, encoded_content in targets:
         out_path = os.path.join(out_dir, target)
         action = "updated" if os.path.exists(out_path) else "added"
         with open(out_path, 'wb') as f:
-            f.write(content)
+            f.write(encoded_content)
         if action == "updated":
             updated += 1
         else:
@@ -232,6 +234,7 @@ with zipfile.ZipFile(zip_path) as z:
         print(f"  [{action}] {orig_basename} -> {target}")
 
     print(f"\nDone. updated={updated}, added={added} in {out_dir}")
+    print("Source files were saved as Base64 text; decode before loading them.")
 PYEOF
 then
     echo "Error: Failed to extract or parse files. Keeping existing js files." >&2
