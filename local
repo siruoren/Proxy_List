@@ -1,0 +1,256 @@
+#!/usr/bin/env bash
+#
+# hk-watch-location.sh — 一键脚本：通过 USB 向 iPhone 发送香港坐标（iAP2 配件定位）
+#
+# 用途：配合华为手表"高血压管理"等地区限定功能的开通（不使用 AnyGo）
+# 原理：accessory-location 通过 USB iAP2 协议完成 MFi-v3 认证后，
+#       向 iPhone 发送 GGA/RMC 坐标，iPhone 将其作为外部定位源采纳。
+#
+# 用法：
+#   ./hk-watch-location.sh              # 一键执行完整流程（默认香港坐标，15 分钟会话）
+#   ./hk-watch-location.sh 22.2810 114.1588   # 自定义坐标
+#   ./hk-watch-location.sh send         # 只发送（跳过已完成的安装步骤）
+#   ./hk-watch-location.sh stop         # 停止发送，恢复手机真实定位
+#
+# 运行前提：
+#   1. macOS + 已安装 uv（无则脚本自动安装）
+#   2. iPhone 通过 USB 连接 Mac，已解锁并"信任此电脑"
+#   3. 发送期间在手机上打开 地图/华为运动健康 触发定位请求
+#
+set -euo pipefail
+
+# ========================= 可配置参数 =========================
+DEFAULT_LAT=22.3193          # 香港纬度
+DEFAULT_LON=114.1694         # 香港经度
+DURATION=900                 # 会话时长（秒），留足操作手机的时间
+REPO_DIR="${HOME}/Documents/Trae-CN/temp_20261109_01/accessory-location"
+REPO_URL="https://github.com/aur3l14no/accessory-location.git"
+IDENTITY_DIR="${HOME}/Library/Application Support/accessory-location/identity"
+PYPI_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
+# DiPlay v0.2.7 APK（含共享实验性 MFi 身份），SHA-256 必须匹配
+APK_SHA256="27b434462da7e78b1ff0987d129ed0a4b0a0e56beceaf8ec221d47150d4675bd"
+APK_URL="https://github.com/shihabal3amri/DiPlay/releases/download/v0.2.7/DiPlay-0.2.7.apk"
+# GitHub 加速镜像（国内直连常 504，按顺序尝试）
+GH_MIRRORS=("https://ghfast.top/" "https://gh-proxy.com/" "https://ghproxy.net/" "")
+SEND_LOG="/tmp/send_hk.log"
+
+c_info()  { printf '\033[1;34m[信息]\033[0m %s\n' "$*"; }
+c_ok()    { printf '\033[1;32m[完成]\033[0m %s\n' "$*"; }
+c_warn()  { printf '\033[1;33m[注意]\033[0m %s\n' "$*"; }
+c_err()   { printf '\033[1;31m[错误]\033[0m %s\n' "$*"; }
+
+# ========================= 子命令：stop =========================
+do_stop() {
+    c_info "停止所有发送进程..."
+    pkill -f "accessory-location send" 2>/dev/null || true
+    pkill -f "local_mfi_v3_helper"    2>/dev/null || true
+    sleep 1
+    # 兜底：按 PID 强杀
+    local pids
+    pids=$(ps aux | grep -E "accessory-location send|local_mfi_v3_helper" | grep -v grep | awk '{print $2}' || true)
+    if [ -n "$pids" ]; then
+        kill -9 $pids 2>/dev/null || true
+        sleep 1
+    fi
+    if ps aux | grep -E "accessory-location send|local_mfi_v3_helper" | grep -v grep >/dev/null; then
+        c_err "仍有进程残留，请手动检查: ps aux | grep accessory"
+    else
+        c_ok "发送进程已全部停止，USB 会话已断开"
+    fi
+    echo
+    c_warn "恢复手机真实定位，请在 iPhone 上操作："
+    echo "  1. 拔掉 USB 线"
+    echo "  2. 设置 → 隐私与安全性 → 定位服务 → 关闭 10 秒后再打开"
+    echo "  3. 打开地图重新定位，确认蓝点回到真实位置"
+}
+
+# ========================= 步骤 1：环境检查 =========================
+check_env() {
+    c_info "步骤 1/5：检查环境"
+
+    if [ "$(uname)" != "Darwin" ]; then
+        c_err "此脚本仅支持 macOS"; exit 1
+    fi
+
+    if ! command -v uv >/dev/null 2>&1; then
+        c_warn "未安装 uv，正在安装..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        export PATH="${HOME}/.local/bin:${PATH}"
+    fi
+    c_ok "uv $(uv --version | awk '{print $2}')"
+
+    # 检查 iPhone 是否通过 USB 连接
+    if system_profiler SPUSBDataType 2>/dev/null | grep -qi "iphone"; then
+        c_ok "检测到 iPhone 已通过 USB 连接"
+    else
+        c_warn "未检测到 iPhone！请确认：已用数据线连接、已解锁、已点'信任此电脑'"
+        c_warn "（脚本继续执行，但发送阶段会失败）"
+        read -r -p "按回车继续，或 Ctrl-C 退出..."
+    fi
+}
+
+# ========================= 步骤 2：克隆仓库 + 安装依赖 =========================
+setup_repo() {
+    c_info "步骤 2/5：准备仓库与依赖"
+
+    if [ ! -d "${REPO_DIR}/.git" ]; then
+        c_info "克隆仓库 ${REPO_URL}"
+        mkdir -p "$(dirname "${REPO_DIR}")"
+        git clone --depth 1 "${REPO_URL}" "${REPO_DIR}"
+    else
+        c_ok "仓库已存在：${REPO_DIR}"
+    fi
+    cd "${REPO_DIR}"
+
+    # 兼容性修复（本次实测踩坑）：
+    # cryptography>=49 只有 macOS arm64 wheel；x86_64 Mac 会走源码编译且本机无 Rust 必失败。
+    # 因此 x86_64 机器将依赖锁定为 <49（48.0.1 是最后带 universal2 wheel 的版本）。
+    if [ "$(uname -m)" = "x86_64" ]; then
+        if grep -q 'cryptography>=43"' pyproject.toml; then
+            c_info "x86_64 Mac：锁定 cryptography<49（49+ 无 x86_64 macOS wheel）"
+            sed -i '' 's/"cryptography>=43",/"cryptography>=43,<49",/' pyproject.toml
+            UV_HTTP_TIMEOUT=600 UV_INDEX_URL="${PYPI_MIRROR}" uv lock
+        else
+            c_ok "cryptography 版本约束已适配"
+        fi
+    fi
+
+    c_info "安装依赖（使用清华镜像，超时 600 秒）..."
+    UV_HTTP_TIMEOUT=600 UV_INDEX_URL="${PYPI_MIRROR}" uv sync
+    uv run python -c "import cryptography, pymobiledevice3" \
+        && c_ok "依赖安装并导入验证通过"
+}
+
+# ========================= 步骤 3：导入 MFi 身份 =========================
+setup_identity() {
+    c_info "步骤 3/5：准备 MFi 身份证书"
+
+    if [ -f "${IDENTITY_DIR}/certificate.p7b" ] && [ -f "${IDENTITY_DIR}/identity.pk8" ]; then
+        c_ok "身份已存在：${IDENTITY_DIR}"
+        return
+    fi
+
+    local apk="/tmp/DiPlay-0.2.7.apk"
+    if [ ! -f "$apk" ]; then
+        c_info "下载 DiPlay v0.2.7 APK（约 33MB，自动尝试加速镜像）..."
+        local ok=1
+        for m in "${GH_MIRRORS[@]}"; do
+            c_info "  尝试: ${m:-GitHub 直连}"
+            if curl -sL --connect-timeout 15 --max-time 300 \
+                 -o "$apk" -H "User-Agent: accessory-location" \
+                 "${m}${APK_URL}" \
+               && [ "$(stat -f%z "$apk")" -gt 1000000 ]; then
+                ok=0; c_ok "  下载成功 ($(stat -f%z "$apk") 字节)"; break
+            fi
+        done
+        [ "$ok" -eq 0 ] || { c_err "所有下载渠道均失败，请手动下载后重试"; exit 1; }
+    fi
+
+    c_info "校验 APK SHA-256..."
+    local actual
+    actual=$(shasum -a 256 "$apk" | awk '{print $1}')
+    if [ "$actual" != "${APK_SHA256}" ]; then
+        c_err "SHA-256 不匹配！期望 ${APK_SHA256}，实际 ${actual}"; exit 1
+    fi
+    c_ok "SHA-256 校验通过"
+
+    c_info "提取身份文件（只提取证书和私钥，不安装 APK）..."
+    cd "${REPO_DIR}"
+    uv run python tools/import_diplay_identity.py --apk "$apk"
+    rm -f "$apk"
+    c_ok "身份已保存到 ${IDENTITY_DIR}（0700 目录 / 0600 文件）"
+    c_info "说明：这是 DiPlay 公开的共享实验性身份，非你的个人凭证；设备是否接受需实测"
+}
+
+# ========================= 步骤 4：发送坐标 =========================
+do_send() {
+    local lat="${1:-${DEFAULT_LAT}}" lon="${2:-${DEFAULT_LON}}"
+
+    c_info "步骤 4/5：发送坐标 (${lat}, ${lon})，会话 ${DURATION} 秒"
+
+    # pymobiledevice3 需要此目录（本次实测：不存在时会 PermissionError）
+    mkdir -p "${HOME}/.pymobiledevice3"
+
+    # 确认 iPhone 连接
+    if ! system_profiler SPUSBDataType 2>/dev/null | grep -qi "iphone"; then
+        c_err "未检测到 iPhone，请连接 USB 后重试"; exit 1
+    fi
+
+    export ACCESSORY_MFI_CERT_FILE="${IDENTITY_DIR}/certificate.p7b"
+    export ACCESSORY_MFI_KEY_FILE="${IDENTITY_DIR}/identity.pk8"
+
+    cd "${REPO_DIR}"
+    c_info "启动 USB 会话，日志：${SEND_LOG}"
+    echo "-----------------------------------------------------------"
+    c_warn "现在请在 iPhone 上：打开地图点定位（触发订阅）"
+    c_warn "蓝点不动时：设置 → 定位服务 关 10 秒再开，回地图重新定位"
+    echo "-----------------------------------------------------------"
+
+    # 前台运行，实时输出 JSON 事件；Ctrl-C 或超时自动结束
+    set +e
+    uv run accessory-location send --transport usb \
+        --auth-helper tools/local_mfi_v3_helper.py \
+        --latitude "$lat" --longitude "$lon" --duration "$DURATION" 2>&1 | tee "${SEND_LOG}"
+    set -e
+}
+
+# ========================= 步骤 5：结果解读 =========================
+report() {
+    c_info "步骤 5/5：会话结果解读"
+    echo
+    if grep -q "authentication_succeeded" "${SEND_LOG}" 2>/dev/null; then
+        c_ok "MFi 认证成功"
+    else
+        c_err "未见认证成功事件，检查证书与 USB 连接"
+    fi
+    if grep -q "location_requested" "${SEND_LOG}" 2>/dev/null; then
+        c_ok "手机已发起定位请求（订阅 GGA+RMC）"
+    else
+        c_warn "未收到定位请求 → 需要在手机上打开地图/运动健康触发"
+    fi
+    local ack
+    ack=$(grep -o '"location_link_acknowledged", "count": [0-9]*' "${SEND_LOG}" 2>/dev/null | tail -1 | grep -o '[0-9]*$' || echo 0)
+    if [ "${ack:-0}" -gt 0 ]; then
+        c_ok "手机确认收到 ${ack} 个坐标包（送达≠采纳，以地图蓝点为准）"
+    else
+        c_warn "无确认包，检查手机端操作"
+    fi
+    echo
+    c_info "验证与后续操作："
+    echo "  1. 地图蓝点移到香港 → 立即打开华为运动健康 → 设备 → 高血压管理 → 开通"
+    echo "  2. 开通后按引导开启即时通知"
+    echo "  3. 操作完成或会话结束后：本脚本 stop 恢复真实定位"
+}
+
+# ========================= 主流程 =========================
+main() {
+    case "${1:-}" in
+        stop)
+            do_stop
+            exit 0
+            ;;
+        send)
+            mkdir -p "${HOME}/.pymobiledevice3"
+            do_send "${2:-}" "${3:-}"
+            report
+            exit 0
+            ;;
+        ""|run)
+            local lat="${2:-${DEFAULT_LAT}}" lon="${3:-${DEFAULT_LON}}"
+            check_env
+            setup_repo
+            setup_identity
+            do_send "$lat" "$lon"
+            report
+            ;;
+        *)
+            echo "用法: $0 [run|send|stop] [纬度] [经度]"
+            echo "  run  (默认) 完整流程：环境检查 → 依赖 → 身份 → 发送"
+            echo "  send        直接发送（跳过安装步骤）"
+            echo "  stop        停止发送并指导恢复真实定位"
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
