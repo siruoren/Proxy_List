@@ -1,6 +1,6 @@
 # hk-watch-location.ps1 - 一键脚本：通过 USB 向 iPhone 发送香港坐标（iAP2 配件定位）[Windows 版]
 #
-# 用途：配合苹果手表"高血压管理"等地区限定功能的开通（不使用 AnyGo）
+# 用途：配合华为手表"高血压管理"等地区限定功能的开通（不使用 AnyGo）
 # 原理：accessory-location 通过 USB iAP2 协议完成 MFi-v3 认证后，
 #       向 iPhone 发送 GGA/RMC 坐标，iPhone 将其作为外部定位源采纳。
 #
