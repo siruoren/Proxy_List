@@ -1,6 +1,9 @@
 hk-watch-location.sh 
 指导开通高血压功能+即时通知 —
 
+所需资源（accessory-location 源码 + DiPlay v0.2.7 APK）已打包为 hk-watch-location-bundle.zip 随本仓库提交，
+脚本运行时会直接从本仓库下载 zip 解压后执行，无需另外克隆 GitHub 仓库或下载 APK。
+
 用法(macos bash)：
 ```
 ./hk-watch-location.sh            # 一键完整流程
