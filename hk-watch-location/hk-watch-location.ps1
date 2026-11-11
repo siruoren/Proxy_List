@@ -239,7 +239,7 @@ function Step-Report {
 
     Write-Host ""
     Write-Info "验证与后续操作："
-    Write-Host "  1. 地图蓝点移到香港 -> 立即打开华为运动健康 -> 设备 -> 高血压管理 -> 开通"
+    Write-Host "  1. 地图蓝点移到香港 -> 立即打开健康 -> 右上角用户图标 -> 打开健康核对清单-> 打开高血压通知 -> 开通"
     Write-Host "  2. 开通后按引导开启即时通知"
     Write-Host "  3. 操作完成或会话结束后：.\hk-watch-location.ps1 stop 恢复真实定位"
 }
