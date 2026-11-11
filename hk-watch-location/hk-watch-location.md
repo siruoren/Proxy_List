@@ -17,16 +17,22 @@ iPhone 将其作为外部定位源采纳，地图蓝点显示为香港，随后�
 macOS（bash）：
 ```bash
 ./hk-watch-location/hk-watch-location.sh          # 一键完整流程（默认香港坐标，15 分钟会话）
+HK_RANDOM=1 ./hk-watch-location/hk-watch-location.sh   # 香港地区随机坐标
 ./hk-watch-location/hk-watch-location.sh stop     # 停止发送，恢复真实定位
 ```
 
 Windows（PowerShell，在仓库根目录）：
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.ps1          # 一键完整流程
+$env:HK_RANDOM='1'                                                                          # 先设置随机模式
+powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.ps1 run      # 再运行
 powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.ps1 stop     # 恢复真实定位
 ```
 
 可选参数（两个脚本一致）：`run|send` 后可跟 `纬度 经度 时长秒`，默认 `22.3193 114.1694 900`。
+设置环境变量 `HK_RANDOM=1`（Windows 先执行 `$env:HK_RANDOM='1'`）且不显式传坐标时，
+每次运行随机生成香港市区坐标（纬 22.24~22.45、经 113.95~114.30，覆盖港岛/九龙/新界）——
+默认固定坐标蓝点不动时可以改用随机模式。
 
 ## 完整流程分步说明
 
@@ -76,6 +82,7 @@ powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.p
 3. 结束后读取日志判断认证/订阅/确认包状态：`grep -E "authentication_succeeded|location_requested|location_link_acknowledged" /tmp/send_hk.log`
 4. 蓝点到香港后提醒用户立即开通高血压管理；完成后运行 `stop` 恢复真实定位
 5. 如需在未连接设备时测试流程，可设置环境变量 `HK_SKIP_DEVICE_CHECK=1` 跳过设备检查
+6. 固定坐标蓝点不动时，改用随机模式重试：`HK_RANDOM=1`（Windows 先 `$env:HK_RANDOM='1'`）
 
 ## 常见问题
 
