@@ -31,7 +31,7 @@ jobs:
         echo '' >> README.md
         echo "# 本源码仅供学习，禁止用于违法犯罪行为，否则后果自负！" >> README.md
         echo '' >> README.md
-        echo "# Auto Update  at ${{ steps.date.outputs.date }}" >> README.md
+        #echo "# Auto Update  at ${{ steps.date.outputs.date }}" >> README.md
         echo '------------------------------------------------' >> README.md
         chmod -R 755 scripts/*;
         cd lxmusic && chmod +x ./fetch_latest_release.sh && ./fetch_latest_release.sh
