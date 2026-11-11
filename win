@@ -38,7 +38,7 @@ $PyPiMirror  = "https://pypi.tuna.tsinghua.edu.cn/simple"
 # 包内 DiPlay v0.2.7 APK（含共享实验性 MFi 身份），解压后 SHA-256 必须匹配
 $ApkSha256   = "27B434462DA7E78B1FF0987D129ED0A4B0A0E56BECEAF8EC221D47150D4675BD"
 # GitHub 加速镜像（国内直连常 504，按顺序尝试；最后一个空串表示直连）
-$GhMirrors   = @("https://ghfast.top/", "https://gh-proxy.com/", "https://ghproxy.net/", "https://github.moeyy.xyz/", "")
+$GhMirrors   = @("https://ghfast.top/", "https://gh-proxy.com/", "https://ghproxy.net/", "")
 $SendLog     = Join-Path $env:TEMP "send_hk.log"
 
 function Write-Info { param($m) Write-Host "[信息] $m" -ForegroundColor Cyan }

@@ -36,7 +36,7 @@ PYPI_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 # 包内 DiPlay v0.2.7 APK（含共享实验性 MFi 身份），解压后 SHA-256 必须匹配
 APK_SHA256="27b434462da7e78b1ff0987d129ed0a4b0a0e56beceaf8ec221d47150d4675bd"
 # GitHub 加速镜像（国内直连常 504，按顺序尝试；最后一个空串表示直连）
-GH_MIRRORS=("https://ghfast.top/" "https://gh-proxy.com/" "https://ghproxy.net/" "https://github.moeyy.xyz/" "")
+GH_MIRRORS=("https://ghfast.top/" "https://gh-proxy.com/" "https://ghproxy.net/" "")
 SEND_LOG="/tmp/send_hk.log"
 
 c_info()  { printf '\033[1;34m[信息]\033[0m %s\n' "$*"; }
