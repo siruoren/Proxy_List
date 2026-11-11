@@ -58,10 +58,11 @@ powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.p
 
 ### 步骤 4：发送坐标（脚本自动 + 需手机配合）
 - 脚本启动 USB 会话（默认 900 秒），实时输出 JSON 事件，日志写入 `/tmp/send_hk.log`（Windows：`%TEMP%\send_hk.log`）
-- **此期间必须提示用户在 iPhone 上操作**：
+- **此期间必须提示用户在 iPhone 上依次操作**：
   1. 打开地图并点击定位按钮（触发定位订阅）
-  2. 蓝点不动时：设置 → 定位服务 → 关闭 10 秒再打开，回地图重新定位
-- 成功标志：地图蓝点移动到香港
+  2. 打开 设置 → 隐私与安全 → 定位服务，关闭定位，等 10 秒后再打开
+  3. 再去健康里设置（健康核对清单 → 高血压管理 → 开通）
+- 成功标志：地图蓝点移动到香港；蓝点不动时重复操作 2 再重新定位
 
 ### 步骤 5：结果解读（脚本自动）
 - `authentication_succeeded` → MFi 认证成功
