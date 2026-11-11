@@ -28,6 +28,8 @@ param(
 # 离线资源包：accessory-location 源码（已去除 .git）+ DiPlay v0.2.7 APK，
 # 随本仓库一起提交，运行时直接下载 zip 解压，无需克隆 GitHub 仓库
 $BundleUrl   = "https://raw.githubusercontent.com/siruoren/Proxy_List/main/hk-watch-location-bundle.zip"
+# jsDelivr CDN 直链（国内可达性好，20MB 内文件可用；候选列表中的第一优先）
+$BundleCdn   = "https://cdn.jsdelivr.net/gh/siruoren/Proxy_List@main/hk-watch-location-bundle.zip"
 $BundleDir   = Join-Path $env:USERPROFILE ".cache\hk-watch-location"
 $RepoDir     = Join-Path $BundleDir "accessory-location"
 $ApkPath     = Join-Path $BundleDir "DiPlay-0.2.7.apk"
@@ -36,7 +38,7 @@ $PyPiMirror  = "https://pypi.tuna.tsinghua.edu.cn/simple"
 # 包内 DiPlay v0.2.7 APK（含共享实验性 MFi 身份），解压后 SHA-256 必须匹配
 $ApkSha256   = "27B434462DA7E78B1FF0987D129ED0A4B0A0E56BECEAF8EC221D47150D4675BD"
 # GitHub 加速镜像（国内直连常 504，按顺序尝试；最后一个空串表示直连）
-$GhMirrors   = @("https://ghfast.top/", "https://gh-proxy.com/", "https://ghproxy.net/", "")
+$GhMirrors   = @("https://ghfast.top/", "https://gh-proxy.com/", "https://ghproxy.net/", "https://github.moeyy.xyz/", "")
 $SendLog     = Join-Path $env:TEMP "send_hk.log"
 
 function Write-Info { param($m) Write-Host "[信息] $m" -ForegroundColor Cyan }
@@ -108,13 +110,15 @@ function Step-SetupRepo {
     Write-Info "步骤 2/5：准备资源包与依赖"
 
     if (-not (Test-Path (Join-Path $RepoDir "pyproject.toml"))) {
-        Write-Info "下载资源包 hk-watch-location-bundle.zip（约 12MB，自动尝试加速镜像）..."
+        Write-Info "下载资源包 hk-watch-location-bundle.zip（约 12MB，自动尝试 CDN 与加速镜像）..."
         New-Item $BundleDir -ItemType Directory -Force | Out-Null
         $zipPath = Join-Path $BundleDir "hk-watch-location-bundle.zip"
+        # 候选顺序：jsDelivr CDN -> 加速镜像 -> GitHub 直连
+        $candidates = @($BundleCdn) + ($GhMirrors | ForEach-Object { "$_$BundleUrl" })
         $ok = $false
-        foreach ($m in $GhMirrors) {
-            Write-Info "  尝试: $( if ($m) { $m } else { 'GitHub 直连' } )"
-            curl.exe -sL --connect-timeout 15 --max-time 600 -o $zipPath "$m$BundleUrl"
+        foreach ($u in $candidates) {
+            Write-Info "  尝试: $u"
+            curl.exe -sL --connect-timeout 15 --max-time 600 -o $zipPath $u
             if ((Test-Path $zipPath) -and ((Get-Item $zipPath).Length -gt 5000000)) {
                 $ok = $true
                 Write-Ok "  下载成功 ($((Get-Item $zipPath).Length) 字节)"; break

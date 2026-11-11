@@ -26,6 +26,8 @@ DURATION=900                 # 会话时长（秒），留足操作手机的时�
 # 离线资源包：accessory-location 源码（已去除 .git）+ DiPlay v0.2.7 APK，
 # 随本仓库一起提交，运行时直接下载 zip 解压，无需克隆 GitHub 仓库
 BUNDLE_URL="https://raw.githubusercontent.com/siruoren/Proxy_List/main/hk-watch-location-bundle.zip"
+# jsDelivr CDN 直链（国内可达性好，20MB 内文件可用；候选列表中的第一优先）
+BUNDLE_CDN="https://cdn.jsdelivr.net/gh/siruoren/Proxy_List@main/hk-watch-location-bundle.zip"
 BUNDLE_DIR="${HOME}/.cache/hk-watch-location"
 REPO_DIR="${BUNDLE_DIR}/accessory-location"
 APK_PATH="${BUNDLE_DIR}/DiPlay-0.2.7.apk"
@@ -34,7 +36,7 @@ PYPI_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 # 包内 DiPlay v0.2.7 APK（含共享实验性 MFi 身份），解压后 SHA-256 必须匹配
 APK_SHA256="27b434462da7e78b1ff0987d129ed0a4b0a0e56beceaf8ec221d47150d4675bd"
 # GitHub 加速镜像（国内直连常 504，按顺序尝试；最后一个空串表示直连）
-GH_MIRRORS=("https://ghfast.top/" "https://gh-proxy.com/" "https://ghproxy.net/" "")
+GH_MIRRORS=("https://ghfast.top/" "https://gh-proxy.com/" "https://ghproxy.net/" "https://github.moeyy.xyz/" "")
 SEND_LOG="/tmp/send_hk.log"
 
 c_info()  { printf '\033[1;34m[信息]\033[0m %s\n' "$*"; }
@@ -97,15 +99,19 @@ setup_repo() {
     c_info "步骤 2/5：准备资源包与依赖"
 
     if [ ! -f "${REPO_DIR}/pyproject.toml" ]; then
-        c_info "下载资源包 hk-watch-location-bundle.zip（约 12MB，自动尝试加速镜像）..."
+        c_info "下载资源包 hk-watch-location-bundle.zip（约 12MB，自动尝试 CDN 与加速镜像）..."
         mkdir -p "${BUNDLE_DIR}"
         local zip_path="${BUNDLE_DIR}/hk-watch-location-bundle.zip"
+        # 候选顺序：jsDelivr CDN → 加速镜像 → GitHub 直连
+        local candidates=("${BUNDLE_CDN}")
+        local m u
+        for m in "${GH_MIRRORS[@]}"; do candidates+=("${m}${BUNDLE_URL}"); done
         local ok=1
-        for m in "${GH_MIRRORS[@]}"; do
-            c_info "  尝试: ${m:-GitHub 直连}"
+        for u in "${candidates[@]}"; do
+            c_info "  尝试: ${u}"
             if curl -sL --connect-timeout 15 --max-time 600 \
                  -o "$zip_path" -H "User-Agent: hk-watch-location" \
-                 "${m}${BUNDLE_URL}" \
+                 "${u}" \
                && [ "$(stat -f%z "$zip_path")" -gt 5000000 ]; then
                 ok=0; c_ok "  下载成功 ($(stat -f%z "$zip_path") 字节)"; break
             fi
