@@ -27,9 +27,9 @@ param(
 # ========================= 可配置参数 =========================
 # 离线资源包：accessory-location 源码（已去除 .git）+ DiPlay v0.2.7 APK，
 # 随本仓库一起提交，运行时直接下载 zip 解压，无需克隆 GitHub 仓库
-$BundleUrl   = "https://raw.githubusercontent.com/siruoren/Proxy_List/main/hk-watch-location-bundle.zip"
+$BundleUrl   = "https://raw.githubusercontent.com/siruoren/Proxy_List/main/hk-watch-location/hk-watch-location-bundle.zip"
 # jsDelivr CDN 直链（国内可达性好，20MB 内文件可用；候选列表中的第一优先）
-$BundleCdn   = "https://cdn.jsdelivr.net/gh/siruoren/Proxy_List@main/hk-watch-location-bundle.zip"
+$BundleCdn   = "https://cdn.jsdelivr.net/gh/siruoren/Proxy_List@main/hk-watch-location/hk-watch-location-bundle.zip"
 $BundleDir   = Join-Path $env:USERPROFILE ".cache\hk-watch-location"
 $RepoDir     = Join-Path $BundleDir "accessory-location"
 $ApkPath     = Join-Path $BundleDir "DiPlay-0.2.7.apk"

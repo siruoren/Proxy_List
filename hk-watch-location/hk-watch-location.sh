@@ -25,9 +25,9 @@ DEFAULT_LON=114.1694         # 香港经度
 DURATION=900                 # 会话时长（秒），留足操作手机的时间
 # 离线资源包：accessory-location 源码（已去除 .git）+ DiPlay v0.2.7 APK，
 # 随本仓库一起提交，运行时直接下载 zip 解压，无需克隆 GitHub 仓库
-BUNDLE_URL="https://raw.githubusercontent.com/siruoren/Proxy_List/main/hk-watch-location-bundle.zip"
+BUNDLE_URL="https://raw.githubusercontent.com/siruoren/Proxy_List/main/hk-watch-location/hk-watch-location-bundle.zip"
 # jsDelivr CDN 直链（国内可达性好，20MB 内文件可用；候选列表中的第一优先）
-BUNDLE_CDN="https://cdn.jsdelivr.net/gh/siruoren/Proxy_List@main/hk-watch-location-bundle.zip"
+BUNDLE_CDN="https://cdn.jsdelivr.net/gh/siruoren/Proxy_List@main/hk-watch-location/hk-watch-location-bundle.zip"
 BUNDLE_DIR="${HOME}/.cache/hk-watch-location"
 REPO_DIR="${BUNDLE_DIR}/accessory-location"
 APK_PATH="${BUNDLE_DIR}/DiPlay-0.2.7.apk"

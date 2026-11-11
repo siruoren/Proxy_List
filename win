@@ -1,4 +1,4 @@
-# hk-watch-location.ps1 - 一键脚本：通过 USB 向 iPhone 发送香港坐标（iAP2 配件定位）[Windows 版]
+﻿# hk-watch-location.ps1 - 一键脚本：通过 USB 向 iPhone 发送香港坐标（iAP2 配件定位）[Windows 版]
 #
 # 用途：配合华为手表"高血压管理"等地区限定功能的开通（不使用 AnyGo）
 # 原理：accessory-location 通过 USB iAP2 协议完成 MFi-v3 认证后，
@@ -25,15 +25,20 @@ param(
 )
 
 # ========================= 可配置参数 =========================
-$RepoDir     = Join-Path $env:USERPROFILE "hk-watch-location\accessory-location"
-$RepoUrl     = "https://github.com/aur3l14no/accessory-location.git"
+# 离线资源包：accessory-location 源码（已去除 .git）+ DiPlay v0.2.7 APK，
+# 随本仓库一起提交，运行时直接下载 zip 解压，无需克隆 GitHub 仓库
+$BundleUrl   = "https://raw.githubusercontent.com/siruoren/Proxy_List/main/hk-watch-location/hk-watch-location-bundle.zip"
+# jsDelivr CDN 直链（国内可达性好，20MB 内文件可用；候选列表中的第一优先）
+$BundleCdn   = "https://cdn.jsdelivr.net/gh/siruoren/Proxy_List@main/hk-watch-location/hk-watch-location-bundle.zip"
+$BundleDir   = Join-Path $env:USERPROFILE ".cache\hk-watch-location"
+$RepoDir     = Join-Path $BundleDir "accessory-location"
+$ApkPath     = Join-Path $BundleDir "DiPlay-0.2.7.apk"
 $IdentityDir = Join-Path $env:APPDATA "accessory-location\identity"
 $PyPiMirror  = "https://pypi.tuna.tsinghua.edu.cn/simple"
-# DiPlay v0.2.7 APK（含共享实验性 MFi 身份），SHA-256 必须匹配
+# 包内 DiPlay v0.2.7 APK（含共享实验性 MFi 身份），解压后 SHA-256 必须匹配
 $ApkSha256   = "27B434462DA7E78B1FF0987D129ED0A4B0A0E56BECEAF8EC221D47150D4675BD"
-$ApkUrl      = "https://github.com/shihabal3amri/DiPlay/releases/download/v0.2.7/DiPlay-0.2.7.apk"
 # GitHub 加速镜像（国内直连常 504，按顺序尝试；最后一个空串表示直连）
-$GhMirrors   = @("https://ghfast.top/", "https://gh-proxy.com/", "https://ghproxy.net/", "")
+$GhMirrors   = @("https://ghfast.top/", "https://gh-proxy.com/", "https://ghproxy.net/", "https://github.moeyy.xyz/", "")
 $SendLog     = Join-Path $env:TEMP "send_hk.log"
 
 function Write-Info { param($m) Write-Host "[信息] $m" -ForegroundColor Cyan }
@@ -100,20 +105,43 @@ function Step-CheckEnv {
     }
 }
 
-# ========================= 步骤 2：克隆仓库 + 安装依赖 =========================
+# ========================= 步骤 2：下载资源包 + 安装依赖 =========================
 function Step-SetupRepo {
-    Write-Info "步骤 2/5：准备仓库与依赖"
+    Write-Info "步骤 2/5：准备资源包与依赖"
 
-    if (-not (Test-Path (Join-Path $RepoDir ".git"))) {
-        $cloned = $false
-        foreach ($m in $GhMirrors) {
-            Write-Info "克隆仓库：$( if ($m) { $m } else { 'GitHub 直连' } )"
-            git clone --depth 1 "$m$RepoUrl" $RepoDir 2>$null
-            if (Test-Path (Join-Path $RepoDir ".git")) { $cloned = $true; break }
+    if (-not (Test-Path (Join-Path $RepoDir "pyproject.toml"))) {
+        Write-Info "下载资源包 hk-watch-location-bundle.zip（约 12MB，自动尝试 CDN 与加速镜像）..."
+        New-Item $BundleDir -ItemType Directory -Force | Out-Null
+        $zipPath = Join-Path $BundleDir "hk-watch-location-bundle.zip"
+        # 候选顺序：jsDelivr CDN -> 加速镜像 -> GitHub 直连
+        $candidates = @($BundleCdn) + ($GhMirrors | ForEach-Object { "$_$BundleUrl" })
+        $ok = $false
+        foreach ($u in $candidates) {
+            Write-Info "  尝试: $u"
+            curl.exe -sL --connect-timeout 15 --max-time 600 -o $zipPath $u
+            if ((Test-Path $zipPath) -and ((Get-Item $zipPath).Length -gt 5000000)) {
+                $ok = $true
+                Write-Ok "  下载成功 ($((Get-Item $zipPath).Length) 字节)"; break
+            }
         }
-        if (-not $cloned) { Write-Err2 "所有克隆渠道均失败，请检查网络后重试"; exit 1 }
-        Write-Ok "克隆成功：$RepoDir"
-    } else { Write-Ok "仓库已存在：$RepoDir" }
+        if (-not $ok) { Write-Err2 "所有下载渠道均失败，请检查网络后重试"; exit 1 }
+
+        Write-Info "解压资源包..."
+        Expand-Archive -Path $zipPath -DestinationPath $BundleDir -Force
+        Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+        if (-not (Test-Path (Join-Path $RepoDir "pyproject.toml"))) {
+            Write-Err2 "资源包解压异常，缺少 accessory-location 源码"; exit 1
+        }
+        Write-Ok "资源包已解压：$BundleDir"
+    } else { Write-Ok "资源包已存在：$BundleDir" }
+
+    # 校验包内 APK 的 SHA-256
+    if (-not (Test-Path $ApkPath)) { Write-Err2 "资源包中缺少 APK：$ApkPath"; exit 1 }
+    $actual = (Get-FileHash $ApkPath -Algorithm SHA256).Hash
+    if ($actual -ne $ApkSha256) {
+        Write-Err2 "APK SHA-256 不匹配！期望 $ApkSha256，实际 $actual"; exit 1
+    }
+    Write-Ok "APK SHA-256 校验通过"
 
     Write-Info "安装依赖（清华镜像，超时 600 秒）..."
     $env:UV_HTTP_TIMEOUT = "600"
@@ -137,19 +165,9 @@ function Step-SetupIdentity {
         Write-Ok "身份已存在：$IdentityDir"; return
     }
 
-    $apk = Join-Path $env:TEMP "DiPlay-0.2.7.apk"
+    $apk = $ApkPath
     if (-not (Test-Path $apk)) {
-        Write-Info "下载 DiPlay v0.2.7 APK（约 33MB，自动尝试加速镜像）..."
-        $ok = $false
-        foreach ($m in $GhMirrors) {
-            Write-Info "  尝试: $( if ($m) { $m } else { 'GitHub 直连' } )"
-            curl.exe -sL --connect-timeout 15 --max-time 300 -o $apk "$m$ApkUrl"
-            if ((Test-Path $apk) -and ((Get-Item $apk).Length -gt 1000000)) {
-                $ok = $true
-                Write-Ok "  下载成功 ($((Get-Item $apk).Length) 字节)"; break
-            }
-        }
-        if (-not $ok) { Write-Err2 "所有下载渠道均失败，请手动下载 APK 后放入 $env:TEMP"; exit 1 }
+        Write-Err2 "资源包 APK 不存在：$apk，请删除 $BundleDir 后重新运行以重新下载资源包"; exit 1
     }
 
     Write-Info "校验 APK SHA-256..."
@@ -164,7 +182,6 @@ function Step-SetupIdentity {
     try {
         uv run python tools/import_diplay_identity.py --apk $apk --output-dir $IdentityDir
     } finally { Pop-Location }
-    Remove-Item $apk -Force -ErrorAction SilentlyContinue
     Write-Ok "身份已保存到 $IdentityDir"
     Write-Info "说明：这是 DiPlay 公开的共享实验性身份，非你的个人凭证；设备是否接受需实测"
 }
