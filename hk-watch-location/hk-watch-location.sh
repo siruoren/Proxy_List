@@ -7,10 +7,16 @@
 #       向 iPhone 发送 GGA/RMC 坐标，iPhone 将其作为外部定位源采纳。
 #
 # 用法：
-#   ./hk-watch-location.sh              # 一键执行完整流程（默认香港坐标，15 分钟会话）
-#   ./hk-watch-location.sh 22.2810 114.1588   # 自定义坐标
-#   ./hk-watch-location.sh send         # 只发送（跳过已完成的安装步骤）
-#   ./hk-watch-location.sh stop         # 停止发送，恢复手机真实定位
+#   ./hk-watch-location.sh                       # 一键完整流程（默认香港坐标，15 分钟会话）
+#   ./hk-watch-location.sh 22.2810 114.1588      # 自定义坐标
+#   ./hk-watch-location.sh run 纬度 经度 时长秒    # 完整流程（时长可省略，默认 900）
+#   ./hk-watch-location.sh send [纬度] [经度] [时长秒]   # 只发送（跳过已完成的安装步骤）
+#   ./hk-watch-location.sh stop                  # 停止发送，恢复手机真实定位
+#
+# AI/自动化执行说明：
+#   - 脚本全程无交互，不会阻塞等待回车；任何前置条件不满足时直接退出（非 0），
+#     并打印精确的修复步骤，按提示逐项完成后再重新执行即可
+#   - 如确需跳过设备检查，设置环境变量 HK_SKIP_DEVICE_CHECK=1
 #
 # 运行前提：
 #   1. macOS + 已安装 uv（无则脚本自动安装）
@@ -84,13 +90,18 @@ check_env() {
     fi
     c_ok "uv $(uv --version | awk '{print $2}')"
 
-    # 检查 iPhone 是否通过 USB 连接
+    # 检查 iPhone 是否通过 USB 连接（失败不阻塞：直接退出并给出修复步骤）
     if system_profiler SPUSBDataType 2>/dev/null | grep -qi "iphone"; then
         c_ok "检测到 iPhone 已通过 USB 连接"
+    elif [ "${HK_SKIP_DEVICE_CHECK:-0}" = "1" ]; then
+        c_warn "HK_SKIP_DEVICE_CHECK=1，已跳过 iPhone 检查（发送阶段可能失败）"
     else
-        c_warn "未检测到 iPhone！请确认：已用数据线连接、已解锁、已点'信任此电脑'"
-        c_warn "（脚本继续执行，但发送阶段会失败）"
-        read -r -p "按回车继续，或 Ctrl-C 退出..."
+        c_err "未检测到 iPhone，请先完成以下操作，然后重新运行本脚本："
+        echo "  1. 用数据线把 iPhone 连接到这台 Mac"
+        echo "  2. 解锁 iPhone；如弹出'信任此电脑'，点'信任'并输入锁屏密码"
+        echo "  3. 重新执行: $0 ${*:-}"
+        echo "  （确需跳过此检查：HK_SKIP_DEVICE_CHECK=1 $0 ...）"
+        exit 1
     fi
 }
 
@@ -191,33 +202,42 @@ setup_identity() {
 
 # ========================= 步骤 4：发送坐标 =========================
 do_send() {
-    local lat="${1:-${DEFAULT_LAT}}" lon="${2:-${DEFAULT_LON}}"
+    local lat="${1:-${DEFAULT_LAT}}" lon="${2:-${DEFAULT_LON}}" dur="${3:-${DURATION}}"
 
-    c_info "步骤 4/5：发送坐标 (${lat}, ${lon})，会话 ${DURATION} 秒"
+    c_info "步骤 4/5：发送坐标 (${lat}, ${lon})，会话 ${dur} 秒"
 
     # pymobiledevice3 需要此目录（本次实测：不存在时会 PermissionError）
     mkdir -p "${HOME}/.pymobiledevice3"
 
-    # 确认 iPhone 连接
-    if ! system_profiler SPUSBDataType 2>/dev/null | grep -qi "iphone"; then
-        c_err "未检测到 iPhone，请连接 USB 后重试"; exit 1
+    # 确认 iPhone 连接（失败不阻塞：直接退出并给出修复步骤）
+    if system_profiler SPUSBDataType 2>/dev/null | grep -qi "iphone"; then
+        c_ok "iPhone 已连接，可以发送"
+    elif [ "${HK_SKIP_DEVICE_CHECK:-0}" = "1" ]; then
+        c_warn "HK_SKIP_DEVICE_CHECK=1，已跳过 iPhone 检查（发送可能失败）"
+    else
+        c_err "未检测到 iPhone。请先完成以下操作，然后重新运行："
+        echo "  1. 用数据线把 iPhone 连接到这台 Mac"
+        echo "  2. 解锁 iPhone；如弹出'信任此电脑'，点'信任'并输入锁屏密码"
+        echo "  3. 重新执行本命令"
+        exit 1
     fi
 
     export ACCESSORY_MFI_CERT_FILE="${IDENTITY_DIR}/certificate.p7b"
     export ACCESSORY_MFI_KEY_FILE="${IDENTITY_DIR}/identity.pk8"
 
     cd "${REPO_DIR}"
-    c_info "启动 USB 会话，日志：${SEND_LOG}"
+    c_info "启动 USB 会话，日志：${SEND_LOG}（进程超时或 Ctrl-C 自动结束）"
     echo "-----------------------------------------------------------"
-    c_warn "现在请在 iPhone 上：打开地图点定位（触发订阅）"
-    c_warn "蓝点不动时：设置 → 定位服务 关 10 秒再开，回地图重新定位"
+    c_warn "【手机操作】现在请在 iPhone 上：打开地图并点击定位按钮（触发定位订阅）"
+    c_warn "【手机操作】蓝点不动时：设置 → 定位服务 → 关闭 10 秒再打开，回地图重新定位"
+    c_warn "【成功标志】地图蓝点移动到香港"
     echo "-----------------------------------------------------------"
 
     # 前台运行，实时输出 JSON 事件；Ctrl-C 或超时自动结束
     set +e
     uv run accessory-location send --transport usb \
         --auth-helper tools/local_mfi_v3_helper.py \
-        --latitude "$lat" --longitude "$lon" --duration "$DURATION" 2>&1 | tee "${SEND_LOG}"
+        --latitude "$lat" --longitude "$lon" --duration "$dur" 2>&1 | tee "${SEND_LOG}"
     set -e
 }
 
@@ -258,23 +278,24 @@ main() {
             ;;
         send)
             mkdir -p "${HOME}/.pymobiledevice3"
-            do_send "${2:-}" "${3:-}"
+            do_send "${2:-}" "${3:-}" "${4:-}"
             report
             exit 0
             ;;
         ""|run)
-            local lat="${2:-${DEFAULT_LAT}}" lon="${3:-${DEFAULT_LON}}"
+            local lat="${2:-${DEFAULT_LAT}}" lon="${3:-${DEFAULT_LON}}" dur="${4:-${DURATION}}"
             check_env
             setup_repo
             setup_identity
-            do_send "$lat" "$lon"
+            do_send "$lat" "$lon" "$dur"
             report
             ;;
         *)
-            echo "用法: $0 [run|send|stop] [纬度] [经度]"
-            echo "  run  (默认) 完整流程：环境检查 → 依赖 → 身份 → 发送"
-            echo "  send        直接发送（跳过安装步骤）"
+            echo "用法: $0 [run|send|stop] [纬度] [经度] [时长秒]"
+            echo "  run  (默认) 完整流程：环境检查 → 资源包/依赖 → MFi 身份 → 发送 → 结果解读"
+            echo "  send        直接发送（跳过安装步骤，适合二次执行）"
             echo "  stop        停止发送并指导恢复真实定位"
+            echo "环境变量: HK_SKIP_DEVICE_CHECK=1 跳过 iPhone 连接检查"
             exit 1
             ;;
     esac

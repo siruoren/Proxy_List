@@ -10,6 +10,11 @@
 #   powershell -ExecutionPolicy Bypass -File .\hk-watch-location.ps1 send               # 跳过安装步骤直接发送
 #   powershell -ExecutionPolicy Bypass -File .\hk-watch-location.ps1 stop               # 停止发送并恢复真实定位
 #
+# AI/自动化执行说明：
+#   - 脚本全程无交互，不会阻塞等待回车；任何前置条件不满足时直接退出（非 0），
+#     并打印精确的修复步骤，按提示逐项完成后再重新执行即可
+#   - 如确需跳过设备检查，先执行 $env:HK_SKIP_DEVICE_CHECK = '1'
+#
 # Windows 特有前提：
 #   1. 已安装 iTunes（官网版）或 Microsoft Store 的"Apple Devices/设备"应用
 #      —— 它提供 usbmuxd 服务（Apple Mobile Device Service，本地端口 27015），
@@ -86,22 +91,33 @@ function Step-CheckEnv {
     Write-Ok "uv $( (uv --version) -replace '.*?(\d[\d.]+.*)$', '$1' )"
 
     # usbmuxd 服务检查（Windows 必需：iTunes / Apple Devices 应用提供）
+    # AI/自动化友好：检查失败不阻塞，直接退出并给出修复步骤；HK_SKIP_DEVICE_CHECK=1 可跳过
     $usbmuxd = Get-NetTCPConnection -LocalPort 27015 -State Listen -ErrorAction SilentlyContinue
     if ($usbmuxd) {
         Write-Ok "usbmuxd 服务已就绪（本地端口 27015）"
+    } elseif ($env:HK_SKIP_DEVICE_CHECK -eq "1") {
+        Write-Warn2 "HK_SKIP_DEVICE_CHECK=1，已跳过 usbmuxd 检查（发送阶段可能失败）"
     } else {
-        Write-Warn2 "未检测到 usbmuxd（端口 27015）！"
-        Write-Host "  请先安装 iTunes（官网版）或 Microsoft Store 的 Apple Devices 应用并重启电脑"
-        Read-Host "已安装则按回车继续，或 Ctrl-C 退出"
+        Write-Err2 "未检测到 usbmuxd（端口 27015）。请先完成以下操作，然后重新运行本脚本："
+        Write-Host "  1. 安装 iTunes（官网版）或 Microsoft Store 的 Apple Devices 应用"
+        Write-Host "  2. 安装后重启电脑（确保 Apple Mobile Device Service 已启动）"
+        Write-Host "  3. 重新执行本命令"
+        Write-Host "  （确需跳过此检查：`$env:HK_SKIP_DEVICE_CHECK='1' 后再运行）"
+        exit 1
     }
 
-    # iPhone USB 检测
+    # iPhone USB 检测（失败不阻塞：直接退出并给出修复步骤）
     $iphone = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue |
         Where-Object { $_.FriendlyName -match "iPhone|iPad|Apple Mobile Device" }
     if ($iphone) { Write-Ok "检测到 iPhone 已通过 USB 连接" }
-    else {
-        Write-Warn2 "未检测到 iPhone！请确认：已用数据线连接、已解锁、已点'信任此电脑'"
-        Read-Host "按回车继续，或 Ctrl-C 退出"
+    elseif ($env:HK_SKIP_DEVICE_CHECK -eq "1") {
+        Write-Warn2 "HK_SKIP_DEVICE_CHECK=1，已跳过 iPhone 检查（发送阶段可能失败）"
+    } else {
+        Write-Err2 "未检测到 iPhone。请先完成以下操作，然后重新运行本脚本："
+        Write-Host "  1. 用数据线把 iPhone 连接到这台电脑"
+        Write-Host "  2. 解锁 iPhone；如弹出'信任此电脑'，点'信任'并输入锁屏密码"
+        Write-Host "  3. 重新执行本命令"
+        exit 1
     }
 }
 
