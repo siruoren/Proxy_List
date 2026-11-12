@@ -51,7 +51,7 @@ powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.p
 - 身份已存在时自动跳过
 
 ### 步骤 4：发送坐标（脚本自动 + 需手机配合）
-- 脚本后台启动 USB 会话（默认 1800 秒），**每 15 秒循环检查日志并实时提示**：
+- 脚本**前台**启动 USB 会话（默认 1800 秒），JSON 事件实时显示；后台监控**每 15 秒循环检查**并提示：
   `MFi 认证成功` → `手机已发起定位请求` → `收到 ACK：手机已确认 N 个坐标包`
 - 日志写入 `/tmp/send_hk.log`（Windows：`%TEMP%\send_hk.log`）
 - **会话结束仍无 ACK 时自动重发（最多 3 次）**，重发前提示手机端重做定位服务开关

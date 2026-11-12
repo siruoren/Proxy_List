@@ -242,39 +242,50 @@ function Invoke-Send {
 
     Push-Location $RepoDir
     try {
-        # 后台发送 + 循环检查 ACK：每 15 秒轮询日志，实时提示认证/订阅/ACK；
-        # 会话结束仍无 ACK 时自动重发（最多 3 次），期间提示手机端重做定位开关
+        # ACK 监控子脚本：每 15 秒轮询日志，把认证/订阅/ACK 状态实时打印到同一控制台
+        # （发送本体保持前台运行、事件实时显示，监控不抢占输出）
+        $watcherScript = Join-Path $env:TEMP "hk_ack_watcher.ps1"
+        @'
+param([string]$Log)
+$na = 0; $sa = 0; $sr = 0
+while ($true) {
+    Start-Sleep -Seconds 15
+    $l = Get-Content $Log -Raw -ErrorAction SilentlyContinue
+    if (-not $l) { continue }
+    if ($sa -eq 0 -and $l -match 'authentication_succeeded') { $sa = 1; Write-Host '[完成] MFi 认证成功' -ForegroundColor Green }
+    if ($sr -eq 0 -and $l -match 'location_requested') { $sr = 1; Write-Host '[完成] 手机已发起定位请求（订阅 GGA+RMC）' -ForegroundColor Green }
+    $a = 0
+    foreach ($m in [regex]::Matches($l, '"location_link_acknowledged", "count": (\d+)')) { $a = [int]$m.Groups[1].Value }
+    if ($a -gt $na) { $na = $a; Write-Host ('[完成] 收到 ACK：手机已确认 ' + $a + ' 个坐标包（送达≠采纳，以地图蓝点为准）') -ForegroundColor Green }
+}
+'@ | Set-Content $watcherScript -Encoding UTF8
+
+        # 前台发送 + 后台 ACK 监控；会话结束无 ACK 自动重发（最多 3 次）
         $attempt = 1; $maxAttempts = 3
         while ($true) {
             Remove-Item $SendLog -Force -ErrorAction SilentlyContinue
-            Write-Info "第 $attempt/$maxAttempts 次发送会话（每 15 秒检查一次 ACK），日志：$SendLog"
-            $proc = Start-Process -FilePath "uv" `
-                -ArgumentList "run accessory-location send --transport usb --auth-helper tools/local_mfi_v3_helper.py --latitude $Latitude --longitude $Longitude --duration $Duration" `
-                -WorkingDirectory $RepoDir -NoNewWindow -PassThru `
-                -RedirectStandardOutput $SendLog -RedirectStandardError "$SendLog.err"
-            $notifiedAck = 0; $seenAuth = $false; $seenReq = $false
-            while (-not $proc.HasExited) {
-                Start-Sleep -Seconds 15
-                $log = Get-Content $SendLog -Raw -ErrorAction SilentlyContinue
-                if (-not $log) { continue }
-                if (-not $seenAuth -and $log -match "authentication_succeeded") {
-                    $seenAuth = $true; Write-Ok "MFi 认证成功"
-                }
-                if (-not $seenReq -and $log -match "location_requested") {
-                    $seenReq = $true; Write-Ok "手机已发起定位请求（订阅 GGA+RMC）"
-                }
-                $lastAck = 0
-                foreach ($m in [regex]::Matches($log, '"location_link_acknowledged", "count": (\d+)')) {
+            Write-Info "第 $attempt/$maxAttempts 次发送会话（事件实时显示，监控每 15 秒检查 ACK），日志：$SendLog"
+            $watch = Start-Process powershell `
+                -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $watcherScript, "-Log", $SendLog) `
+                -NoNewWindow -PassThru
+            try {
+                # 前台运行，实时输出 JSON 事件；Ctrl-C 或超时自动结束
+                uv run accessory-location send --transport usb `
+                    --auth-helper tools/local_mfi_v3_helper.py `
+                    --latitude $Latitude --longitude $Longitude --duration $Duration 2>&1 |
+                    Tee-Object -FilePath $SendLog
+            } finally {
+                try { $watch.Kill() } catch {}
+            }
+            $lastAck = 0
+            $final = Get-Content $SendLog -Raw -ErrorAction SilentlyContinue
+            if ($final) {
+                foreach ($m in [regex]::Matches($final, '"location_link_acknowledged", "count": (\d+)')) {
                     $lastAck = [int]$m.Groups[1].Value
                 }
-                if ($lastAck -gt $notifiedAck) {
-                    $notifiedAck = $lastAck
-                    Write-Ok "收到 ACK：手机已确认 $lastAck 个坐标包（送达≠采纳，以地图蓝点为准）"
-                }
             }
-            $proc.WaitForExit()
-            if ($notifiedAck -gt 0) {
-                Write-Ok "本次会话共收到 $notifiedAck 个 ACK，蓝点确认在香港后立刻去健康开通"
+            if ($lastAck -gt 0) {
+                Write-Ok "本次会话共收到 $lastAck 个 ACK，蓝点确认在香港后立刻去健康开通"
                 break
             }
             if ($attempt -ge $maxAttempts) {

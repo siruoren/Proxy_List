@@ -249,20 +249,11 @@ do_send() {
         grep -o '"location_link_acknowledged", "count": [0-9]*' "${SEND_LOG}" 2>/dev/null | tail -1 | grep -o '[0-9]*$' || echo 0
     }
 
-    # 后台发送 + 循环检查 ACK：每 15 秒轮询日志，实时提示认证/订阅/ACK；
-    # 会话结束仍无 ACK 时自动重发（最多 3 次），期间提示手机端重做定位开关
-    set +e
-    trap 'kill "${send_pid:-0}" 2>/dev/null; exit 130' INT TERM
-    local attempt=1 max_attempts=3 ack notified_ack=0 seen_auth=0 seen_req=0
-    while :; do
-        rm -f "${SEND_LOG}"
-        c_info "第 ${attempt}/${max_attempts} 次发送会话（每 15 秒检查一次 ACK），日志：${SEND_LOG}"
-        uv run accessory-location send --transport usb \
-            --auth-helper tools/local_mfi_v3_helper.py \
-            --latitude "$lat" --longitude "$lon" --duration "$dur" > "${SEND_LOG}" 2>&1 &
-        send_pid=$!
-        notified_ack=0; seen_auth=0; seen_req=0
-        while kill -0 "${send_pid}" 2>/dev/null; do
+    # 后台监控线程：每 15 秒轮询日志，实时提示认证/订阅/ACK 状态
+    # （发送本体保持前台运行、事件实时显示，监控不抢占输出）
+    monitor_ack() {
+        local notified_ack=0 seen_auth=0 seen_req=0 ack
+        while :; do
             sleep 15
             if [ "${seen_auth}" -eq 0 ] && grep -q "authentication_succeeded" "${SEND_LOG}" 2>/dev/null; then
                 seen_auth=1; c_ok "MFi 认证成功"
@@ -276,7 +267,21 @@ do_send() {
                 c_ok "收到 ACK：手机已确认 ${notified_ack} 个坐标包（送达≠采纳，以地图蓝点为准）"
             fi
         done
-        wait "${send_pid}" 2>/dev/null
+    }
+
+    # 前台发送 + 后台 ACK 监控；会话结束无 ACK 自动重发（最多 3 次）
+    local attempt=1 max_attempts=3 ack
+    trap 'exit 130' INT TERM
+    while :; do
+        rm -f "${SEND_LOG}"
+        c_info "第 ${attempt}/${max_attempts} 次发送会话（事件实时显示，监控每 15 秒检查 ACK），日志：${SEND_LOG}"
+        monitor_ack &
+        local mon_pid=$!
+        uv run accessory-location send --transport usb \
+            --auth-helper tools/local_mfi_v3_helper.py \
+            --latitude "$lat" --longitude "$lon" --duration "$dur" 2>&1 | tee "${SEND_LOG}"
+        kill "${mon_pid}" 2>/dev/null
+        wait "${mon_pid}" 2>/dev/null
         ack=$(read_ack)
         if [ "${ack:-0}" -gt 0 ]; then
             c_ok "本次会话共收到 ${ack} 个 ACK，蓝点确认在香港后立刻去健康开通"
@@ -292,7 +297,6 @@ do_send() {
         sleep 10
     done
     trap - INT TERM
-    set -e
 }
 
 # ========================= 步骤 5：结果解读 =========================
