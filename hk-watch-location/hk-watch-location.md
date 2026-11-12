@@ -3,7 +3,7 @@
 ## 原理
 
 accessory-location 通过 USB iAP2 协议完成 MFi-v3 认证后，向 iPhone 发送 GGA/RMC 坐标，
-iPhone 将其作为外部定位源采纳，地图蓝点显示为香港，随后在华为运动健康里开通地区限定功能
+iPhone 将其作为外部定位源采纳，地图蓝点显示为香港，随后在健康里开通地区限定功能
 （高血压管理 + 即时通知）。
 
 所需资源（accessory-location 源码 + DiPlay v0.2.7 APK）已打包为 hk-watch-location-bundle.zip
@@ -67,7 +67,7 @@ powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.p
 - `location_link_acknowledged` 计数 > 0 → 手机确认收到坐标包（送达≠采纳，以地图蓝点为准）
 
 ### 步骤 6：开通功能（人工，蓝点到香港后立刻做）
-1. iPhone 打开华为运动健康 → 右上角用户图标 → 打开健康核对清单 → 高血压管理 → 开通
+1. iPhone 打开健康 → 右上角用户图标 → 打开健康核对清单 → 高血压管理 → 开通
 2. 按引导开启即时通知
 3. 完成后执行 `stop` 子命令停止发送，并按脚本提示恢复手机真实定位：
    拔掉 USB 线 → 设置 → 隐私与安全性 → 定位服务 → 关闭 10 秒再打开 → 地图确认蓝点回到真实位置
@@ -90,8 +90,8 @@ powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.p
 - **认证失败（无 authentication_succeeded）**：DiPlay 共享身份可能已被苹果吊销，属预期风险
 - **蓝点不动**：手机定位服务开关一次再触发；确认手机插着 USB 线且脚本在运行中
 - **蓝点到香港但功能打不开（需多次重试）**：开通必须在会话进行中完成（默认 30 分钟）；
-  保持 USB 连接重跑 `send`，期间重做定位服务开关；检查华为运动健康的定位权限
-  （设置 → 隐私与安全 → 定位服务 → 华为运动健康 → 使用 App 期间）；
+  保持 USB 连接重跑 `send`，期间重做定位服务开关；检查健康的定位权限
+  （设置 → 隐私与安全 → 定位服务 → 健康 → 使用 App 期间）；
   多次重试无效时换一组固定坐标（如尖沙咀 22.2988 114.1722、中环 22.2810 114.1588）
 - **资源包版本过旧（uv sync 报 README.md 缺失）**：CDN 缓存未刷新（约 12 小时）。
   脚本会校验包内 BUNDLE_VERSION（当前 v3），不匹配自动换渠道；全部渠道都旧时按提示手动下载放置
