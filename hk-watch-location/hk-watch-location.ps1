@@ -1,8 +1,7 @@
-﻿# hk-watch-location.ps1 - 一键脚本：通过 USB 向 iPhone 发送香港坐标（iAP2 配件定位）[Windows 版]
+﻿# hk-watch-location.ps1 - 通过 USB/iAP2 向获批测试设备发送模拟坐标 [Windows 版]
 #
-# 用途：配合手表"高血压管理"等地区限定功能的开通（不使用 AnyGo）
-# 原理：accessory-location 通过 USB iAP2 协议完成 MFi-v3 认证后，
-#       向 iPhone 发送 GGA/RMC 坐标，iPhone 将其作为外部定位源采纳。
+# 用途：在自有或获批测试设备上验证 accessory-location 的定位数据传输。
+#       GGA/RMC 是模拟坐标，不代表设备真实位置；不得用于获取地区受限功能或绕过服务规则。
 #
 # 用法（在 PowerShell 中执行）：
 #   powershell -ExecutionPolicy Bypass -File .\hk-watch-location.ps1                    # 一键完整流程
@@ -15,7 +14,7 @@
 #      —— 它提供 usbmuxd 服务（Apple Mobile Device Service，本地端口 27015），
 #         pymobiledevice3 在 Windows 上依赖它访问 iPhone
 #   2. iPhone 用数据线连接，已解锁并点击"信任此电脑"
-#   3. 发送期间在手机上打开 地图/运动健康 触发定位请求
+#   3. 仅在获批的测试应用中触发定位请求
 
 param(
     [Parameter(Position = 0)][string]$Command = "run",
@@ -185,8 +184,7 @@ function Invoke-Send {
 
     Write-Info "启动 USB 会话，日志：$SendLog"
     Write-Host "-----------------------------------------------------------"
-    Write-Warn2 "现在请在 iPhone 上：打开地图点定位（触发订阅）"
-    Write-Warn2 "蓝点不动时：设置 - 隐私与安全 - 定位服务 关 10 秒再开，回地图重新定位"
+    Write-Warn2 "请仅在获批的测试应用中触发定位请求；不要用于改变真实位置或获取受限服务资格"
     Write-Host "-----------------------------------------------------------"
 
     Push-Location $RepoDir
@@ -211,7 +209,7 @@ function Step-Report {
     else { Write-Err2 "未见认证成功事件，检查证书与 USB 连接" }
 
     if ($log -match "location_requested") { Write-Ok "手机已发起定位请求（订阅 GGA+RMC）" }
-    else { Write-Warn2 "未收到定位请求 -> 需要在手机上打开地图/运动健康触发" }
+    else { Write-Warn2 "未收到定位请求 -> 请检查获批测试应用及 USB 会话状态" }
 
     $ack = 0
     foreach ($m in [regex]::Matches($log, '"location_link_acknowledged", "count": (\d+)')) {
@@ -221,10 +219,8 @@ function Step-Report {
     else { Write-Warn2 "无确认包，检查手机端操作" }
 
     Write-Host ""
-    Write-Info "验证与后续操作："
-    Write-Host "  1. 地图蓝点移到香港 -> 立即健康 → 右上角头像 → 健康清单 → 高血压管理 → 开通"
-    Write-Host "  2. 开通后按引导开启即时通知"
-    Write-Host "  3. 操作完成或会话结束后：.\hk-watch-location.ps1 stop 恢复真实定位"
+    Write-Info "测试结束后运行 .\hk-watch-location.ps1 stop，并确认设备已恢复真实定位。"
+    Write-Warn2 "坐标包送达不代表系统或应用采纳，也不代表任何服务资格。"
 }
 
 # ========================= 主流程 =========================

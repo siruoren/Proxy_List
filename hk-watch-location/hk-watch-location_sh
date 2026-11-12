@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 #
-# hk-watch-location.sh — 一键脚本：通过 USB 向 iPhone 发送香港坐标（iAP2 配件定位）
+# hk-watch-location.sh — 通过 USB/iAP2 向获批测试设备发送模拟坐标
 #
-# 用途：配合手表"高血压管理"等地区限定功能的开通（不使用 AnyGo）
-# 原理：accessory-location 通过 USB iAP2 协议完成 MFi-v3 认证后，
-#       向 iPhone 发送 GGA/RMC 坐标，iPhone 将其作为外部定位源采纳。
+# 用途：在自有或获批测试设备上验证 accessory-location 的定位数据传输。
+#       GGA/RMC 是模拟坐标，不代表设备真实位置；不得用于获取地区受限功能或绕过服务规则。
 #
 # 用法：
 #   ./hk-watch-location.sh              # 一键执行完整流程（默认香港坐标，15 分钟会话）
@@ -15,7 +14,7 @@
 # 运行前提：
 #   1. macOS + 已安装 uv（无则脚本自动安装）
 #   2. iPhone 通过 USB 连接 Mac，已解锁并"信任此电脑"
-#   3. 发送期间在手机上打开 地图/运动健康 触发定位请求
+#   3. 仅在获批的测试应用中触发定位请求
 #
 set -euo pipefail
 
@@ -182,8 +181,7 @@ do_send() {
     cd "${REPO_DIR}"
     c_info "启动 USB 会话，日志：${SEND_LOG}"
     echo "-----------------------------------------------------------"
-    c_warn "现在请在 iPhone 上：打开地图点定位（触发订阅）"
-    c_warn "蓝点不动时：设置 - 隐私与安全 - 定位服务 关 10 秒再开，回地图重新定位"
+    c_warn "请仅在获批的测试应用中触发定位请求；不要用于改变真实位置或获取受限服务资格"
     echo "-----------------------------------------------------------"
 
     # 前台运行，实时输出 JSON 事件；Ctrl-C 或超时自动结束
@@ -206,7 +204,7 @@ report() {
     if grep -q "location_requested" "${SEND_LOG}" 2>/dev/null; then
         c_ok "手机已发起定位请求（订阅 GGA+RMC）"
     else
-        c_warn "未收到定位请求 → 需要在手机上打开地图/运动健康触发"
+        c_warn "未收到定位请求 → 请检查获批测试应用及 USB 会话状态"
     fi
     local ack
     ack=$(grep -o '"location_link_acknowledged", "count": [0-9]*' "${SEND_LOG}" 2>/dev/null | tail -1 | grep -o '[0-9]*$' || echo 0)
@@ -216,10 +214,8 @@ report() {
         c_warn "无确认包，检查手机端操作"
     fi
     echo
-    c_info "验证与后续操作："
-    echo "  1. 地图蓝点移到香港 → 立即健康 → 右上角头像 → 健康清单 → 高血压管理 → 开通"
-    echo "  2. 开通后按引导开启即时通知"
-    echo "  3. 操作完成或会话结束后：本脚本 stop 恢复真实定位"
+    c_info "测试结束后运行本脚本 stop，并确认设备已恢复真实定位。"
+    c_warn "坐标包送达不代表系统或应用采纳，也不代表任何服务资格。"
 }
 
 # ========================= 主流程 =========================
