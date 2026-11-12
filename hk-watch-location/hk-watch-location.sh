@@ -12,7 +12,6 @@
 #   ./hk-watch-location.sh run 纬度 经度 时长秒    # 完整流程（时长可省略，默认 900）
 #   ./hk-watch-location.sh send [纬度] [经度] [时长秒]   # 只发送（跳过已完成的安装步骤）
 #   ./hk-watch-location.sh stop                  # 停止发送，恢复手机真实定位
-#   HK_RANDOM=1 ./hk-watch-location.sh           # 香港地区随机坐标（默认固定坐标蓝点不动时可改用）
 #
 # AI/自动化执行说明：
 #   - 脚本全程无交互，不会阻塞等待回车；任何前置条件不满足时直接退出（非 0），
@@ -210,26 +209,11 @@ setup_identity() {
     c_info "说明：这是 DiPlay 公开的共享实验性身份，非你的个人凭证；设备是否接受需实测"
 }
 
-# 香港地区随机坐标（覆盖港岛/九龙/新界市区：纬 22.24~22.45，经 113.95~114.30）
-random_hk() {
-    awk -v s="$((RANDOM * 32768 + RANDOM + $$))" 'BEGIN{srand(s < 0 ? -s : s);printf "%.4f %.4f",22.24+rand()*0.21,113.95+rand()*0.35}'
-}
-
-# 解析坐标：HK_RANDOM=1 且未显式传坐标时，随机生成香港坐标
-resolve_coords() {
-    if [ "${HK_RANDOM:-0}" = "1" ] && [ -z "$1" ] && [ -z "$2" ]; then
-        random_hk
-    else
-        echo "${1:-${DEFAULT_LAT}} ${2:-${DEFAULT_LON}}"
-    fi
-}
-
 # ========================= 步骤 4：发送坐标 =========================
 do_send() {
     local lat="${1:-${DEFAULT_LAT}}" lon="${2:-${DEFAULT_LON}}" dur="${3:-${DURATION}}"
 
     c_info "步骤 4/5：发送坐标 (${lat}, ${lon})，会话 ${dur} 秒"
-    [ "${HK_RANDOM:-0}" = "1" ] && c_warn "随机定位模式（HK_RANDOM=1）：本次为随机香港坐标；固定坐标请显式传参"
 
     # pymobiledevice3 需要此目录（本次实测：不存在时会 PermissionError）
     mkdir -p "${HOME}/.pymobiledevice3"
@@ -300,7 +284,7 @@ report() {
     echo "     会话期间重做定位服务开关（关 10 秒再开），蓝点确认在香港后立刻去健康开通"
     echo "  2. 检查定位权限：设置 → 隐私与安全 → 定位服务 → 华为运动健康 → 允许'使用 App 期间'"
     echo "  3. 会话时长默认 30 分钟；会话已结束时蓝点会恢复真实位置，开通必须在会话进行中完成"
-    echo "  4. 每次重试可用 HK_RANDOM=1 换一个随机香港坐标（个别固定点可能被手机拒绝采纳）"
+    echo "  4. 多次重试仍无效时，换一组固定香港坐标重试（如尖沙咀 22.2988 114.1722、中环 22.2810 114.1588）"
 }
 
 # ========================= 主流程 =========================
@@ -312,16 +296,12 @@ main() {
             ;;
         send)
             mkdir -p "${HOME}/.pymobiledevice3"
-            local lat lon
-            read -r lat lon <<< "$(resolve_coords "${2:-}" "${3:-}")"
-            do_send "$lat" "$lon" "${4:-}"
+            do_send "${2:-}" "${3:-}" "${4:-}"
             report
             exit 0
             ;;
         ""|run)
-            local lat lon dur
-            read -r lat lon <<< "$(resolve_coords "${2:-}" "${3:-}")"
-            dur="${4:-${DURATION}}"
+            local lat="${2:-${DEFAULT_LAT}}" lon="${3:-${DEFAULT_LON}}" dur="${4:-${DURATION}}"
             check_env
             setup_repo
             setup_identity
@@ -333,7 +313,7 @@ main() {
             echo "  run  (默认) 完整流程：环境检查 → 资源包/依赖 → MFi 身份 → 发送 → 结果解读"
             echo "  send        直接发送（跳过安装步骤，适合二次执行）"
             echo "  stop        停止发送并指导恢复真实定位"
-            echo "环境变量: HK_SKIP_DEVICE_CHECK=1 跳过 iPhone 连接检查；HK_RANDOM=1 香港随机坐标"
+            echo "环境变量: HK_SKIP_DEVICE_CHECK=1 跳过 iPhone 连接检查"
             exit 1
             ;;
     esac

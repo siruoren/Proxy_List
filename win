@@ -9,7 +9,6 @@
 #   powershell -ExecutionPolicy Bypass -File .\hk-watch-location.ps1 run 22.2810 114.1588  # 自定义坐标
 #   powershell -ExecutionPolicy Bypass -File .\hk-watch-location.ps1 send               # 跳过安装步骤直接发送
 #   powershell -ExecutionPolicy Bypass -File .\hk-watch-location.ps1 stop               # 停止发送并恢复真实定位
-#   $env:HK_RANDOM='1' 后再运行脚本                                                     # 香港地区随机坐标
 #
 # AI/自动化执行说明：
 #   - 脚本全程无交互，不会阻塞等待回车；任何前置条件不满足时直接退出（非 0），
@@ -48,14 +47,6 @@ $BundleVersion = "v3"
 # GitHub 加速镜像（国内直连常 504，按顺序尝试；最后一个空串表示直连）
 $GhMirrors   = @("https://ghfast.top/", "https://gh-proxy.com/", "https://ghproxy.net/", "")
 $SendLog     = Join-Path $env:TEMP "send_hk.log"
-
-# 香港地区随机坐标（覆盖港岛/九龙/新界市区：纬 22.24~22.45，经 113.95~114.30）
-function Get-RandomHkPoint {
-    return @(
-        [math]::Round((Get-Random -Minimum 22.24 -Maximum 22.45), 4),
-        [math]::Round((Get-Random -Minimum 113.95 -Maximum 114.30), 4)
-    )
-}
 
 function Write-Info { param($m) Write-Host "[信息] $m" -ForegroundColor Cyan }
 function Write-Ok   { param($m) Write-Host "[完成] $m" -ForegroundColor Green }
@@ -291,16 +282,10 @@ function Step-Report {
     Write-Host "     会话期间重做定位服务开关（关 10 秒再开），蓝点确认在香港后立刻去健康开通"
     Write-Host "  2. 检查定位权限：设置 - 隐私与安全 - 定位服务 - 华为运动健康 - 允许'使用 App 期间'"
     Write-Host "  3. 会话时长默认 30 分钟；会话已结束时蓝点会恢复真实位置，开通必须在会话进行中完成"
-    Write-Host "  4. 每次重试可用 HK_RANDOM='1' 换一个随机香港坐标（个别固定点可能被手机拒绝采纳）"
+    Write-Host "  4. 多次重试仍无效时，换一组固定香港坐标重试（如尖沙咀 22.2988 114.1722、中环 22.2810 114.1588）"
 }
 
 # ========================= 主流程 =========================
-# 随机定位模式：$env:HK_RANDOM='1' 且未显式传坐标时，随机生成香港坐标
-if ($env:HK_RANDOM -eq "1" -and $Latitude -eq 22.3193 -and $Longitude -eq 114.1694) {
-    $p = Get-RandomHkPoint
-    $Latitude = [double]$p[0]; $Longitude = [double]$p[1]
-    Write-Info "随机定位模式（HK_RANDOM=1）：本次坐标 ($Latitude, $Longitude)；固定坐标请显式传参"
-}
 switch ($Command) {
     "stop"  { Invoke-Stop }
     "send"  { Invoke-Send; Step-Report }
@@ -316,6 +301,6 @@ switch ($Command) {
         Write-Host "  run  (默认) 完整流程：环境检查 -> 依赖 -> 身份 -> 发送"
         Write-Host "  send        直接发送（跳过安装步骤）"
         Write-Host "  stop        停止发送并指导恢复真实定位"
-        Write-Host "环境变量: HK_SKIP_DEVICE_CHECK='1' 跳过设备检查；HK_RANDOM='1' 香港随机坐标"
+        Write-Host "环境变量: HK_SKIP_DEVICE_CHECK='1' 跳过设备检查"
     }
 }
