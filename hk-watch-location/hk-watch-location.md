@@ -54,7 +54,8 @@ powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.p
 - 脚本**前台**启动 USB 会话（默认 1800 秒），JSON 事件实时显示；后台监控**每 15 秒循环检查**并提示：
   `MFi 认证成功` → `手机已发起定位请求` → `收到 ACK：手机已确认 N 个坐标包`
 - 日志写入 `/tmp/send_hk.log`（Windows：`%TEMP%\send_hk.log`）
-- **会话结束仍无 ACK 时自动重发（最多 3 次）**，重发前提示手机端重做定位服务开关
+- **keep the sender running**：会话异常中断（手机断链）时自动重连重发、持续保持发送端运行，
+  仅当会话完整跑完才停止（Ctrl-C 可手动停止）
 - **此期间必须提示用户在 iPhone 上依次操作**：
   1. 打开地图并点击定位按钮（触发定位订阅）
   2. 打开 设置 → 隐私与安全 → 定位服务，关闭定位，等 10 秒后再打开

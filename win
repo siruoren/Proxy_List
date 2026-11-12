@@ -260,11 +260,13 @@ while ($true) {
 }
 '@ | Set-Content $watcherScript -Encoding UTF8
 
-        # 前台发送 + 后台 ACK 监控；会话结束无 ACK 自动重发（最多 3 次）
-        $attempt = 1; $maxAttempts = 3
+        # 前台发送 + 后台 ACK 监控；keep the sender running：
+        # 会话异常中断（手机断链等 error 事件）时自动重连重发，持续保持发送端运行；
+        # 仅当会话完整跑完（无 error 事件）才停止——有 ACK 提示成功，无 ACK 提示手机端未订阅
+        $attempt = 1
         while ($true) {
             Remove-Item $SendLog -Force -ErrorAction SilentlyContinue
-            Write-Info "第 $attempt/$maxAttempts 次发送会话（事件实时显示，监控每 15 秒检查 ACK），日志：$SendLog"
+            Write-Info "第 $attempt 次发送会话（事件实时显示，监控每 15 秒检查 ACK），日志：$SendLog；异常自动重连，Ctrl-C 停止"
             $watch = Start-Process powershell `
                 -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $watcherScript, "-Log", $SendLog) `
                 -NoNewWindow -PassThru
@@ -284,22 +286,22 @@ while ($true) {
                     $lastAck = [int]$m.Groups[1].Value
                 }
             }
-            # 会话异常中断（手机断开链路等 error 事件）时即使有 ACK 也继续重发：
-            # 官方建议是保持发送端运行，iOS 采纳坐标需要链路持续有效
-            $hadError = $final -match '"error"'
-            if ($lastAck -gt 0 -and -not $hadError) {
-                Write-Ok "本次会话共收到 $lastAck 个 ACK 且链路正常结束，蓝点确认在香港后立刻去健康开通"
+            # keep the sender running：会话异常中断时即使有 ACK 也继续重连重发
+            $hadError = $false
+            if ($final -and $final -match '"error"') { $hadError = $true }
+            if (-not $hadError) {
+                if ($lastAck -gt 0) {
+                    Write-Ok "会话完整跑完，共收到 $lastAck 个 ACK；蓝点确认在香港后立刻去健康开通"
+                } else {
+                    Write-Warn2 "会话完整跑完但无 ACK：手机端未订阅，请打开地图/运动健康触发定位后重跑本命令"
+                }
                 break
             }
-            if ($lastAck -gt 0 -and $hadError) {
-                Write-Warn2 "会话收到 $lastAck 个 ACK 但链路异常中断（手机断开），iOS 采纳需要链路持续有效"
-            }
-            if ($attempt -ge $maxAttempts) {
-                Write-Warn2 "连续 $maxAttempts 次会话均无 ACK（坐标已发出但 iPhone 未确认采纳）"
-                break
+            if ($lastAck -gt 0) {
+                Write-Warn2 "会话收到 $lastAck 个 ACK 但链路异常中断，自动重连保持发送端运行"
             }
             $attempt++
-            Write-Warn2 "本次会话未收到任何 ACK，即将自动重发。手机端请重做："
+            Write-Warn2 "会话异常中断，10 秒后自动重连（Ctrl-C 停止）。手机端请重做："
             Write-Host "  设置 - 隐私与安全 - 定位服务，关闭 10 秒再打开 - 回地图点定位"
             Start-Sleep -Seconds 10
         }

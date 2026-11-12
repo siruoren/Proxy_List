@@ -269,14 +269,15 @@ do_send() {
         done
     }
 
-    # 前台发送 + 后台 ACK 监控；会话结束无 ACK 自动重发（最多 3 次）
-    # 注意：uv 会话可能以非 0 退出（如 ConnectionTerminatedError），需 set +e 交给重试逻辑处理
-    local attempt=1 max_attempts=3 ack
+    # 前台发送 + 后台 ACK 监控；keep the sender running：
+    # 会话异常中断（手机断链等 error 事件）时自动重连重发，持续保持发送端运行；
+    # 仅当会话完整跑完（无 error 事件）才停止——有 ACK 提示成功，无 ACK 提示手机端未订阅
+    local attempt=1 ack had_error
     set +e
     trap 'exit 130' INT TERM
     while :; do
         rm -f "${SEND_LOG}"
-        c_info "第 ${attempt}/${max_attempts} 次发送会话（事件实时显示，监控每 15 秒检查 ACK），日志：${SEND_LOG}"
+        c_info "第 ${attempt} 次发送会话（事件实时显示，监控每 15 秒检查 ACK），日志：${SEND_LOG}；异常自动重连，Ctrl-C 停止"
         monitor_ack &
         local mon_pid=$!
         uv run accessory-location send --transport usb \
@@ -285,22 +286,20 @@ do_send() {
         kill "${mon_pid}" 2>/dev/null
         wait "${mon_pid}" 2>/dev/null
         ack=$(read_ack)
-        # 会话异常中断（手机断开链路等 error 事件）时即使有 ACK 也继续重发：
-        # 官方建议是保持发送端运行，iOS 采纳坐标需要链路持续有效
-        if [ "${ack:-0}" -gt 0 ] && ! grep -q '"error"' "${SEND_LOG}" 2>/dev/null; then
-            c_ok "本次会话共收到 ${ack} 个 ACK 且链路正常结束，蓝点确认在香港后立刻去健康开通"
+        had_error=1
+        grep -q '"error"' "${SEND_LOG}" 2>/dev/null || had_error=0
+        if [ "${had_error}" -eq 0 ]; then
+            if [ "${ack:-0}" -gt 0 ]; then
+                c_ok "会话完整跑完，共收到 ${ack} 个 ACK；蓝点确认在香港后立刻去健康开通"
+            else
+                c_warn "会话完整跑完但无 ACK：手机端未订阅，请打开地图/运动健康触发定位后重跑本命令"
+            fi
             break
         fi
-        if [ "${ack:-0}" -gt 0 ] && grep -q '"error"' "${SEND_LOG}" 2>/dev/null; then
-            c_warn "会话收到 ${ack} 个 ACK 但链路异常中断（手机断开），iOS 采纳需要链路持续有效"
-        fi
-        if [ "${attempt}" -ge "${max_attempts}" ]; then
-            c_warn "连续 ${max_attempts} 次会话均无 ACK（坐标已发出但 iPhone 未确认采纳）"
-            break
-        fi
-        attempt=$((attempt + 1))
-        c_warn "本次会话未收到任何 ACK，即将自动重发。手机端请重做："
+        [ "${ack:-0}" -gt 0 ] && c_warn "会话收到 ${ack} 个 ACK 但链路异常中断，自动重连保持发送端运行"
+        c_warn "会话异常中断，10 秒后自动重连（Ctrl-C 停止）。手机端请重做："
         echo "  设置 → 隐私与安全 → 定位服务，关闭 10 秒再打开 → 回地图点定位"
+        attempt=$((attempt + 1))
         sleep 10
     done
     trap - INT TERM
