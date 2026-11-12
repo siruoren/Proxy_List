@@ -270,7 +270,9 @@ do_send() {
     }
 
     # 前台发送 + 后台 ACK 监控；会话结束无 ACK 自动重发（最多 3 次）
+    # 注意：uv 会话可能以非 0 退出（如 ConnectionTerminatedError），需 set +e 交给重试逻辑处理
     local attempt=1 max_attempts=3 ack
+    set +e
     trap 'exit 130' INT TERM
     while :; do
         rm -f "${SEND_LOG}"
@@ -297,6 +299,7 @@ do_send() {
         sleep 10
     done
     trap - INT TERM
+    set -e
 }
 
 # ========================= 步骤 5：结果解读 =========================
