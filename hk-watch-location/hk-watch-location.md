@@ -88,7 +88,10 @@ powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.p
 - **所有下载渠道失败**：检查网络/代理；或手动把 hk-watch-location-bundle.zip 放到
   `~/.cache/hk-watch-location/` 后重跑
 - **认证失败（无 authentication_succeeded）**：DiPlay 共享身份可能已被苹果吊销，属预期风险
-- **蓝点不动**：手机定位服务开关一次再触发；确认手机插着 USB 线且脚本在运行中
+- **蓝点不动（有 ACK 但 iOS 未采纳）**：上游 README 明确记载 iOS 可能拒绝采纳
+  （官方建议：保持发送端运行 + 定位服务开关后重新定位；即便如此 iOS 仍可能拒绝）。
+  脚本行为：会话异常中断（手机断链）时即使有 ACK 也会自动重发，最多 3 次，
+  以保持链路持续有效；DiPlay 共享身份为实验性质，设备是否采纳由 iOS 决定
 - **蓝点到香港但功能打不开（需多次重试）**：开通必须在会话进行中完成（默认 30 分钟）；
   保持 USB 连接重跑 `send`，期间重做定位服务开关；检查健康的定位权限
   （设置 → 隐私与安全 → 定位服务 → 健康 → 使用 App 期间）；

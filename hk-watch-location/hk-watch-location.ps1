@@ -284,9 +284,15 @@ while ($true) {
                     $lastAck = [int]$m.Groups[1].Value
                 }
             }
-            if ($lastAck -gt 0) {
-                Write-Ok "本次会话共收到 $lastAck 个 ACK，蓝点确认在香港后立刻去健康开通"
+            # 会话异常中断（手机断开链路等 error 事件）时即使有 ACK 也继续重发：
+            # 官方建议是保持发送端运行，iOS 采纳坐标需要链路持续有效
+            $hadError = $final -match '"error"'
+            if ($lastAck -gt 0 -and -not $hadError) {
+                Write-Ok "本次会话共收到 $lastAck 个 ACK 且链路正常结束，蓝点确认在香港后立刻去健康开通"
                 break
+            }
+            if ($lastAck -gt 0 -and $hadError) {
+                Write-Warn2 "会话收到 $lastAck 个 ACK 但链路异常中断（手机断开），iOS 采纳需要链路持续有效"
             }
             if ($attempt -ge $maxAttempts) {
                 Write-Warn2 "连续 $maxAttempts 次会话均无 ACK（坐标已发出但 iPhone 未确认采纳）"

@@ -285,9 +285,14 @@ do_send() {
         kill "${mon_pid}" 2>/dev/null
         wait "${mon_pid}" 2>/dev/null
         ack=$(read_ack)
-        if [ "${ack:-0}" -gt 0 ]; then
-            c_ok "本次会话共收到 ${ack} 个 ACK，蓝点确认在香港后立刻去健康开通"
+        # 会话异常中断（手机断开链路等 error 事件）时即使有 ACK 也继续重发：
+        # 官方建议是保持发送端运行，iOS 采纳坐标需要链路持续有效
+        if [ "${ack:-0}" -gt 0 ] && ! grep -q '"error"' "${SEND_LOG}" 2>/dev/null; then
+            c_ok "本次会话共收到 ${ack} 个 ACK 且链路正常结束，蓝点确认在香港后立刻去健康开通"
             break
+        fi
+        if [ "${ack:-0}" -gt 0 ] && grep -q '"error"' "${SEND_LOG}" 2>/dev/null; then
+            c_warn "会话收到 ${ack} 个 ACK 但链路异常中断（手机断开），iOS 采纳需要链路持续有效"
         fi
         if [ "${attempt}" -ge "${max_attempts}" ]; then
             c_warn "连续 ${max_attempts} 次会话均无 ACK（坐标已发出但 iPhone 未确认采纳）"
