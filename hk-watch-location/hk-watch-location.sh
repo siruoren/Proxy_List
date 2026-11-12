@@ -244,11 +244,54 @@ do_send() {
     c_warn "【成功标志】地图蓝点移动到香港；蓝点不动时重复操作 2 再重新定位"
     echo "-----------------------------------------------------------"
 
-    # 前台运行，实时输出 JSON 事件；Ctrl-C 或超时自动结束
+    # 从日志读取最新 ACK 计数
+    read_ack() {
+        grep -o '"location_link_acknowledged", "count": [0-9]*' "${SEND_LOG}" 2>/dev/null | tail -1 | grep -o '[0-9]*$' || echo 0
+    }
+
+    # 后台发送 + 循环检查 ACK：每 15 秒轮询日志，实时提示认证/订阅/ACK；
+    # 会话结束仍无 ACK 时自动重发（最多 3 次），期间提示手机端重做定位开关
     set +e
-    uv run accessory-location send --transport usb \
-        --auth-helper tools/local_mfi_v3_helper.py \
-        --latitude "$lat" --longitude "$lon" --duration "$dur" 2>&1 | tee "${SEND_LOG}"
+    trap 'kill "${send_pid:-0}" 2>/dev/null; exit 130' INT TERM
+    local attempt=1 max_attempts=3 ack notified_ack=0 seen_auth=0 seen_req=0
+    while :; do
+        rm -f "${SEND_LOG}"
+        c_info "第 ${attempt}/${max_attempts} 次发送会话（每 15 秒检查一次 ACK），日志：${SEND_LOG}"
+        uv run accessory-location send --transport usb \
+            --auth-helper tools/local_mfi_v3_helper.py \
+            --latitude "$lat" --longitude "$lon" --duration "$dur" > "${SEND_LOG}" 2>&1 &
+        send_pid=$!
+        notified_ack=0; seen_auth=0; seen_req=0
+        while kill -0 "${send_pid}" 2>/dev/null; do
+            sleep 15
+            if [ "${seen_auth}" -eq 0 ] && grep -q "authentication_succeeded" "${SEND_LOG}" 2>/dev/null; then
+                seen_auth=1; c_ok "MFi 认证成功"
+            fi
+            if [ "${seen_req}" -eq 0 ] && grep -q "location_requested" "${SEND_LOG}" 2>/dev/null; then
+                seen_req=1; c_ok "手机已发起定位请求（订阅 GGA+RMC）"
+            fi
+            ack=$(read_ack)
+            if [ "${ack:-0}" -gt "${notified_ack}" ]; then
+                notified_ack=${ack}
+                c_ok "收到 ACK：手机已确认 ${notified_ack} 个坐标包（送达≠采纳，以地图蓝点为准）"
+            fi
+        done
+        wait "${send_pid}" 2>/dev/null
+        ack=$(read_ack)
+        if [ "${ack:-0}" -gt 0 ]; then
+            c_ok "本次会话共收到 ${ack} 个 ACK，蓝点确认在香港后立刻去健康开通"
+            break
+        fi
+        if [ "${attempt}" -ge "${max_attempts}" ]; then
+            c_warn "连续 ${max_attempts} 次会话均无 ACK（坐标已发出但 iPhone 未确认采纳）"
+            break
+        fi
+        attempt=$((attempt + 1))
+        c_warn "本次会话未收到任何 ACK，即将自动重发。手机端请重做："
+        echo "  设置 → 隐私与安全 → 定位服务，关闭 10 秒再打开 → 回地图点定位"
+        sleep 10
+    done
+    trap - INT TERM
     set -e
 }
 

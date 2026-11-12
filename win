@@ -242,11 +242,50 @@ function Invoke-Send {
 
     Push-Location $RepoDir
     try {
-        # 前台运行，实时输出 JSON 事件；Ctrl-C 或超时自动结束
-        uv run accessory-location send --transport usb `
-            --auth-helper tools/local_mfi_v3_helper.py `
-            --latitude $Latitude --longitude $Longitude --duration $Duration 2>&1 |
-            Tee-Object -FilePath $SendLog
+        # 后台发送 + 循环检查 ACK：每 15 秒轮询日志，实时提示认证/订阅/ACK；
+        # 会话结束仍无 ACK 时自动重发（最多 3 次），期间提示手机端重做定位开关
+        $attempt = 1; $maxAttempts = 3
+        while ($true) {
+            Remove-Item $SendLog -Force -ErrorAction SilentlyContinue
+            Write-Info "第 $attempt/$maxAttempts 次发送会话（每 15 秒检查一次 ACK），日志：$SendLog"
+            $proc = Start-Process -FilePath "uv" `
+                -ArgumentList "run accessory-location send --transport usb --auth-helper tools/local_mfi_v3_helper.py --latitude $Latitude --longitude $Longitude --duration $Duration" `
+                -WorkingDirectory $RepoDir -NoNewWindow -PassThru `
+                -RedirectStandardOutput $SendLog -RedirectStandardError "$SendLog.err"
+            $notifiedAck = 0; $seenAuth = $false; $seenReq = $false
+            while (-not $proc.HasExited) {
+                Start-Sleep -Seconds 15
+                $log = Get-Content $SendLog -Raw -ErrorAction SilentlyContinue
+                if (-not $log) { continue }
+                if (-not $seenAuth -and $log -match "authentication_succeeded") {
+                    $seenAuth = $true; Write-Ok "MFi 认证成功"
+                }
+                if (-not $seenReq -and $log -match "location_requested") {
+                    $seenReq = $true; Write-Ok "手机已发起定位请求（订阅 GGA+RMC）"
+                }
+                $lastAck = 0
+                foreach ($m in [regex]::Matches($log, '"location_link_acknowledged", "count": (\d+)')) {
+                    $lastAck = [int]$m.Groups[1].Value
+                }
+                if ($lastAck -gt $notifiedAck) {
+                    $notifiedAck = $lastAck
+                    Write-Ok "收到 ACK：手机已确认 $lastAck 个坐标包（送达≠采纳，以地图蓝点为准）"
+                }
+            }
+            $proc.WaitForExit()
+            if ($notifiedAck -gt 0) {
+                Write-Ok "本次会话共收到 $notifiedAck 个 ACK，蓝点确认在香港后立刻去健康开通"
+                break
+            }
+            if ($attempt -ge $maxAttempts) {
+                Write-Warn2 "连续 $maxAttempts 次会话均无 ACK（坐标已发出但 iPhone 未确认采纳）"
+                break
+            }
+            $attempt++
+            Write-Warn2 "本次会话未收到任何 ACK，即将自动重发。手机端请重做："
+            Write-Host "  设置 - 隐私与安全 - 定位服务，关闭 10 秒再打开 - 回地图点定位"
+            Start-Sleep -Seconds 10
+        }
     } finally { Pop-Location }
 }
 

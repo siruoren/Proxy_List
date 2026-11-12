@@ -51,7 +51,10 @@ powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.p
 - 身份已存在时自动跳过
 
 ### 步骤 4：发送坐标（脚本自动 + 需手机配合）
-- 脚本启动 USB 会话（默认 900 秒），实时输出 JSON 事件，日志写入 `/tmp/send_hk.log`（Windows：`%TEMP%\send_hk.log`）
+- 脚本后台启动 USB 会话（默认 1800 秒），**每 15 秒循环检查日志并实时提示**：
+  `MFi 认证成功` → `手机已发起定位请求` → `收到 ACK：手机已确认 N 个坐标包`
+- 日志写入 `/tmp/send_hk.log`（Windows：`%TEMP%\send_hk.log`）
+- **会话结束仍无 ACK 时自动重发（最多 3 次）**，重发前提示手机端重做定位服务开关
 - **此期间必须提示用户在 iPhone 上依次操作**：
   1. 打开地图并点击定位按钮（触发定位订阅）
   2. 打开 设置 → 隐私与安全 → 定位服务，关闭定位，等 10 秒后再打开
