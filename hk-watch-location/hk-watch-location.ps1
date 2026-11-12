@@ -10,11 +10,6 @@
 #   powershell -ExecutionPolicy Bypass -File .\hk-watch-location.ps1 send               # 跳过安装步骤直接发送
 #   powershell -ExecutionPolicy Bypass -File .\hk-watch-location.ps1 stop               # 停止发送并恢复真实定位
 #
-# AI/自动化执行说明：
-#   - 脚本全程无交互，不会阻塞等待回车；任何前置条件不满足时直接退出（非 0），
-#     并打印精确的修复步骤，按提示逐项完成后再重新执行即可
-#   - 如确需跳过设备检查，先执行 $env:HK_SKIP_DEVICE_CHECK = '1'
-#
 # Windows 特有前提：
 #   1. 已安装 iTunes（官网版）或 Microsoft Store 的"Apple Devices/设备"应用
 #      —— 它提供 usbmuxd 服务（Apple Mobile Device Service，本地端口 27015），
@@ -26,7 +21,7 @@ param(
     [Parameter(Position = 0)][string]$Command = "run",
     [Parameter(Position = 1)][double]$Latitude = 22.3193,   # 香港纬度
     [Parameter(Position = 2)][double]$Longitude = 114.1694, # 香港经度
-    [int]$Duration = 1800                                    # 会话时长（秒），留足开通功能时间
+    [int]$Duration = 900                                    # 会话时长（秒）
 )
 
 # ========================= 可配置参数 =========================
@@ -42,10 +37,8 @@ $IdentityDir = Join-Path $env:APPDATA "accessory-location\identity"
 $PyPiMirror  = "https://pypi.tuna.tsinghua.edu.cn/simple"
 # 包内 DiPlay v0.2.7 APK（含共享实验性 MFi 身份），解压后 SHA-256 必须匹配
 $ApkSha256   = "27B434462DA7E78B1FF0987D129ED0A4B0A0E56BECEAF8EC221D47150D4675BD"
-# 资源包版本标记：CDN/镜像可能缓存旧包，版本不匹配自动换渠道
-$BundleVersion = "v3"
 # GitHub 加速镜像（国内直连常 504，按顺序尝试；最后一个空串表示直连）
-$GhMirrors   = @("https://ghfast.top/", "https://gh-proxy.com/", "https://ghproxy.net/", "")
+$GhMirrors   = @("https://ghfast.top/", "https://gh-proxy.com/", "https://ghproxy.net/", "https://github.moeyy.xyz/", "")
 $SendLog     = Join-Path $env:TEMP "send_hk.log"
 
 function Write-Info { param($m) Write-Host "[信息] $m" -ForegroundColor Cyan }
@@ -93,33 +86,22 @@ function Step-CheckEnv {
     Write-Ok "uv $( (uv --version) -replace '.*?(\d[\d.]+.*)$', '$1' )"
 
     # usbmuxd 服务检查（Windows 必需：iTunes / Apple Devices 应用提供）
-    # AI/自动化友好：检查失败不阻塞，直接退出并给出修复步骤；HK_SKIP_DEVICE_CHECK=1 可跳过
     $usbmuxd = Get-NetTCPConnection -LocalPort 27015 -State Listen -ErrorAction SilentlyContinue
     if ($usbmuxd) {
         Write-Ok "usbmuxd 服务已就绪（本地端口 27015）"
-    } elseif ($env:HK_SKIP_DEVICE_CHECK -eq "1") {
-        Write-Warn2 "HK_SKIP_DEVICE_CHECK=1，已跳过 usbmuxd 检查（发送阶段可能失败）"
     } else {
-        Write-Err2 "未检测到 usbmuxd（端口 27015）。请先完成以下操作，然后重新运行本脚本："
-        Write-Host "  1. 安装 iTunes（官网版）或 Microsoft Store 的 Apple Devices 应用"
-        Write-Host "  2. 安装后重启电脑（确保 Apple Mobile Device Service 已启动）"
-        Write-Host "  3. 重新执行本命令"
-        Write-Host "  （确需跳过此检查：`$env:HK_SKIP_DEVICE_CHECK='1' 后再运行）"
-        exit 1
+        Write-Warn2 "未检测到 usbmuxd（端口 27015）！"
+        Write-Host "  请先安装 iTunes（官网版）或 Microsoft Store 的 Apple Devices 应用并重启电脑"
+        Read-Host "已安装则按回车继续，或 Ctrl-C 退出"
     }
 
-    # iPhone USB 检测（失败不阻塞：直接退出并给出修复步骤）
+    # iPhone USB 检测
     $iphone = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue |
         Where-Object { $_.FriendlyName -match "iPhone|iPad|Apple Mobile Device" }
     if ($iphone) { Write-Ok "检测到 iPhone 已通过 USB 连接" }
-    elseif ($env:HK_SKIP_DEVICE_CHECK -eq "1") {
-        Write-Warn2 "HK_SKIP_DEVICE_CHECK=1，已跳过 iPhone 检查（发送阶段可能失败）"
-    } else {
-        Write-Err2 "未检测到 iPhone。请先完成以下操作，然后重新运行本脚本："
-        Write-Host "  1. 用数据线把 iPhone 连接到这台电脑"
-        Write-Host "  2. 解锁 iPhone；如弹出'信任此电脑'，点'信任'并输入锁屏密码"
-        Write-Host "  3. 重新执行本命令"
-        exit 1
+    else {
+        Write-Warn2 "未检测到 iPhone！请确认：已用数据线连接、已解锁、已点'信任此电脑'"
+        Read-Host "按回车继续，或 Ctrl-C 退出"
     }
 }
 
@@ -127,44 +109,31 @@ function Step-CheckEnv {
 function Step-SetupRepo {
     Write-Info "步骤 2/5：准备资源包与依赖"
 
-    $versionFile = Join-Path $BundleDir "BUNDLE_VERSION"
-    $needDownload = (-not (Test-Path (Join-Path $RepoDir "pyproject.toml"))) -or
-                    (-not (Test-Path $versionFile)) -or
-                    ((Get-Content $versionFile -Raw -ErrorAction SilentlyContinue).Trim() -ne $BundleVersion)
-    if ($needDownload) {
+    if (-not (Test-Path (Join-Path $RepoDir "pyproject.toml"))) {
         Write-Info "下载资源包 hk-watch-location-bundle.zip（约 12MB，自动尝试 CDN 与加速镜像）..."
         New-Item $BundleDir -ItemType Directory -Force | Out-Null
         $zipPath = Join-Path $BundleDir "hk-watch-location-bundle.zip"
         # 候选顺序：jsDelivr CDN -> 加速镜像 -> GitHub 直连
-        # CDN/镜像可能缓存旧版资源包：下载后校验 BUNDLE_VERSION，不匹配则换下一个渠道
         $candidates = @($BundleCdn) + ($GhMirrors | ForEach-Object { "$_$BundleUrl" })
         $ok = $false
         foreach ($u in $candidates) {
             Write-Info "  尝试: $u"
             curl.exe -sL --connect-timeout 15 --max-time 600 -o $zipPath $u
-            if (-not ((Test-Path $zipPath) -and ((Get-Item $zipPath).Length -gt 5000000))) {
-                Write-Warn2 "  下载不完整，换下一个渠道"; continue
+            if ((Test-Path $zipPath) -and ((Get-Item $zipPath).Length -gt 5000000)) {
+                $ok = $true
+                Write-Ok "  下载成功 ($((Get-Item $zipPath).Length) 字节)"; break
             }
-            Write-Ok "  下载成功 ($((Get-Item $zipPath).Length) 字节)"
-            Expand-Archive -Path $zipPath -DestinationPath $BundleDir -Force
-            $ver = if (Test-Path $versionFile) { (Get-Content $versionFile -Raw).Trim() } else { "missing" }
-            if ($ver -ne $BundleVersion -or -not (Test-Path (Join-Path $RepoDir "pyproject.toml"))) {
-                Write-Warn2 "  该渠道资源包版本过旧（$ver），换下一个渠道"
-                Remove-Item $RepoDir -Recurse -Force -ErrorAction SilentlyContinue
-                Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
-                continue
-            }
-            $ok = $true; break
         }
-        if (-not $ok) {
-            Write-Err2 "所有渠道均未获取到 $BundleVersion 资源包（CDN 缓存可能未刷新）"
-            Write-Host "  1. 稍等几分钟后重试（jsDelivr 缓存约 12 小时刷新）"
-            Write-Host "  2. 或手动下载 hk-watch-location-bundle.zip 解压到 $BundleDir 后重跑"
-            exit 1
-        }
+        if (-not $ok) { Write-Err2 "所有下载渠道均失败，请检查网络后重试"; exit 1 }
+
+        Write-Info "解压资源包..."
+        Expand-Archive -Path $zipPath -DestinationPath $BundleDir -Force
         Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
-        Write-Ok "资源包已解压：$BundleDir（版本 $BundleVersion）"
-    } else { Write-Ok "资源包已存在：$BundleDir（版本 $BundleVersion）" }
+        if (-not (Test-Path (Join-Path $RepoDir "pyproject.toml"))) {
+            Write-Err2 "资源包解压异常，缺少 accessory-location 源码"; exit 1
+        }
+        Write-Ok "资源包已解压：$BundleDir"
+    } else { Write-Ok "资源包已存在：$BundleDir" }
 
     # 校验包内 APK 的 SHA-256
     if (-not (Test-Path $ApkPath)) { Write-Err2 "资源包中缺少 APK：$ApkPath"; exit 1 }
@@ -233,78 +202,17 @@ function Invoke-Send {
 
     Write-Info "启动 USB 会话，日志：$SendLog"
     Write-Host "-----------------------------------------------------------"
-    Write-Warn2 "【手机操作 0】检查定位权限：设置 - 隐私与安全 - 定位服务 - 健康，选'使用 App 期间'"
-    Write-Warn2 "【手机操作 1】打开 地图 点定位，触发定位订阅"
-    Write-Warn2 "【手机操作 2】打开 设置 - 隐私与安全 - 定位服务，关闭定位，等 10 秒后再打开"
-    Write-Warn2 "【手机操作 3】再去 健康里设置（健康核对清单 - 高血压管理 - 开通）"
-    Write-Warn2 "【成功标志】地图蓝点移动到香港；蓝点不动时重复操作 2 再重新定位"
+    Write-Warn2 "现在请在 iPhone 上：打开地图点定位（触发订阅）"
+    Write-Warn2 "蓝点不动时：设置 - 定位服务 关 10 秒再开，回地图重新定位"
     Write-Host "-----------------------------------------------------------"
 
     Push-Location $RepoDir
     try {
-        # ACK 监控子脚本：每 15 秒轮询日志，把认证/订阅/ACK 状态实时打印到同一控制台
-        # （发送本体保持前台运行、事件实时显示，监控不抢占输出）
-        $watcherScript = Join-Path $env:TEMP "hk_ack_watcher.ps1"
-        @'
-param([string]$Log)
-$na = 0; $sa = 0; $sr = 0
-while ($true) {
-    Start-Sleep -Seconds 15
-    $l = Get-Content $Log -Raw -ErrorAction SilentlyContinue
-    if (-not $l) { continue }
-    if ($sa -eq 0 -and $l -match 'authentication_succeeded') { $sa = 1; Write-Host '[完成] MFi 认证成功' -ForegroundColor Green }
-    if ($sr -eq 0 -and $l -match 'location_requested') { $sr = 1; Write-Host '[完成] 手机已发起定位请求（订阅 GGA+RMC）' -ForegroundColor Green }
-    $a = 0
-    foreach ($m in [regex]::Matches($l, '"location_link_acknowledged", "count": (\d+)')) { $a = [int]$m.Groups[1].Value }
-    if ($a -gt $na) { $na = $a; Write-Host ('[完成] 收到 ACK：手机已确认 ' + $a + ' 个坐标包（送达≠采纳，以地图蓝点为准）') -ForegroundColor Green }
-}
-'@ | Set-Content $watcherScript -Encoding UTF8
-
-        # 前台发送 + 后台 ACK 监控；keep the sender running：
-        # 会话异常中断（手机断链等 error 事件）时自动重连重发，持续保持发送端运行；
-        # 仅当会话完整跑完（无 error 事件）才停止——有 ACK 提示成功，无 ACK 提示手机端未订阅
-        $attempt = 1
-        while ($true) {
-            Remove-Item $SendLog -Force -ErrorAction SilentlyContinue
-            Write-Info "第 $attempt 次发送会话（事件实时显示，监控每 15 秒检查 ACK），日志：$SendLog；异常自动重连，Ctrl-C 停止"
-            $watch = Start-Process powershell `
-                -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $watcherScript, "-Log", $SendLog) `
-                -NoNewWindow -PassThru
-            try {
-                # 前台运行，实时输出 JSON 事件；Ctrl-C 或超时自动结束
-                uv run accessory-location send --transport usb `
-                    --auth-helper tools/local_mfi_v3_helper.py `
-                    --latitude $Latitude --longitude $Longitude --duration $Duration 2>&1 |
-                    Tee-Object -FilePath $SendLog
-            } finally {
-                try { $watch.Kill() } catch {}
-            }
-            $lastAck = 0
-            $final = Get-Content $SendLog -Raw -ErrorAction SilentlyContinue
-            if ($final) {
-                foreach ($m in [regex]::Matches($final, '"location_link_acknowledged", "count": (\d+)')) {
-                    $lastAck = [int]$m.Groups[1].Value
-                }
-            }
-            # keep the sender running：会话异常中断时即使有 ACK 也继续重连重发
-            $hadError = $false
-            if ($final -and $final -match '"error"') { $hadError = $true }
-            if (-not $hadError) {
-                if ($lastAck -gt 0) {
-                    Write-Ok "会话完整跑完，共收到 $lastAck 个 ACK；蓝点确认在香港后立刻去健康开通"
-                } else {
-                    Write-Warn2 "会话完整跑完但无 ACK：手机端未订阅，请打开地图/运动健康触发定位后重跑本命令"
-                }
-                break
-            }
-            if ($lastAck -gt 0) {
-                Write-Warn2 "会话收到 $lastAck 个 ACK 但链路异常中断，自动重连保持发送端运行"
-            }
-            $attempt++
-            Write-Warn2 "会话异常中断，10 秒后自动重连（Ctrl-C 停止）。手机端请重做："
-            Write-Host "  设置 - 隐私与安全 - 定位服务，关闭 10 秒再打开 - 回地图点定位"
-            Start-Sleep -Seconds 10
-        }
+        # 前台运行，实时输出 JSON 事件；Ctrl-C 或超时自动结束
+        uv run accessory-location send --transport usb `
+            --auth-helper tools/local_mfi_v3_helper.py `
+            --latitude $Latitude --longitude $Longitude --duration $Duration 2>&1 |
+            Tee-Object -FilePath $SendLog
     } finally { Pop-Location }
 }
 
@@ -331,16 +239,9 @@ function Step-Report {
 
     Write-Host ""
     Write-Info "验证与后续操作："
-    Write-Host "  1. 地图蓝点移到香港 -> 立即打开健康 -> 右上角用户图标 -> 打开健康核对清单-> 打开高血压通知 -> 开通"
+    Write-Host "  1. 地图蓝点移到香港 -> 立即打开华为运动健康 -> 设备 -> 高血压管理 -> 开通"
     Write-Host "  2. 开通后按引导开启即时通知"
     Write-Host "  3. 操作完成或会话结束后：.\hk-watch-location.ps1 stop 恢复真实定位"
-    Write-Host ""
-    Write-Warn2 "蓝点已到香港但功能仍打不开时（需多次重试的常见原因排查）："
-    Write-Host "  1. 保持 USB 连接不断开，直接重跑 send 子命令重新发送坐标（幂等，跳过安装）"
-    Write-Host "     会话期间重做定位服务开关（关 10 秒再开），蓝点确认在香港后立刻去健康开通"
-    Write-Host "  2. 检查定位权限：设置 - 隐私与安全 - 定位服务 - 健康 - 允许'使用 App 期间'"
-    Write-Host "  3. 会话时长默认 30 分钟；会话已结束时蓝点会恢复真实位置，开通必须在会话进行中完成"
-    Write-Host "  4. 多次重试仍无效时，换一组固定香港坐标重试（如尖沙咀 22.2988 114.1722、中环 22.2810 114.1588）"
 }
 
 # ========================= 主流程 =========================
@@ -359,6 +260,5 @@ switch ($Command) {
         Write-Host "  run  (默认) 完整流程：环境检查 -> 依赖 -> 身份 -> 发送"
         Write-Host "  send        直接发送（跳过安装步骤）"
         Write-Host "  stop        停止发送并指导恢复真实定位"
-        Write-Host "环境变量: HK_SKIP_DEVICE_CHECK='1' 跳过设备检查"
     }
 }
