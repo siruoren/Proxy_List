@@ -22,9 +22,9 @@ set -euo pipefail
 DEFAULT_LAT=22.3193          # 香港纬度
 DEFAULT_LON=114.1694         # 香港经度
 DURATION=900                 # 会话时长（秒），留足操作手机的时间
-REPO_DIR="${HOME}/Documents/Trae-CN/temp_20261109_01/accessory-location"
+REPO_DIR="/tmp/temp_20261109_01/accessory-location"
 REPO_URL="https://github.com/siruoren/accessory-location.git"
-IDENTITY_DIR="${HOME}/Library/Application Support/accessory-location/identity"
+IDENTITY_DIR="/tmp/accessory-location-identity"
 PYPI_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 # DiPlay v0.2.7 APK（含共享实验性 MFi 身份），SHA-256 必须匹配
 APK_SHA256="27b434462da7e78b1ff0987d129ed0a4b0a0e56beceaf8ec221d47150d4675bd"
@@ -155,7 +155,7 @@ setup_identity() {
 
     c_info "提取身份文件（只提取证书和私钥，不安装 APK）..."
     cd "${REPO_DIR}"
-    uv run python tools/import_diplay_identity.py --apk "$apk"
+    uv run python tools/import_diplay_identity.py --apk "$apk" --output-dir "$IDENTITY_DIR"
     rm -f "$apk"
     c_ok "身份已保存到 ${IDENTITY_DIR}（0700 目录 / 0600 文件）"
     c_info "说明：这是 DiPlay 公开的共享实验性身份，非你的个人凭证；设备是否接受需实测"
