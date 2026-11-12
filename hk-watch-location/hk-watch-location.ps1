@@ -27,7 +27,7 @@ param(
     [Parameter(Position = 0)][string]$Command = "run",
     [Parameter(Position = 1)][double]$Latitude = 22.3193,   # 香港纬度
     [Parameter(Position = 2)][double]$Longitude = 114.1694, # 香港经度
-    [int]$Duration = 900                                    # 会话时长（秒）
+    [int]$Duration = 1800                                    # 会话时长（秒），留足开通功能时间
 )
 
 # ========================= 可配置参数 =========================
@@ -43,6 +43,8 @@ $IdentityDir = Join-Path $env:APPDATA "accessory-location\identity"
 $PyPiMirror  = "https://pypi.tuna.tsinghua.edu.cn/simple"
 # 包内 DiPlay v0.2.7 APK（含共享实验性 MFi 身份），解压后 SHA-256 必须匹配
 $ApkSha256   = "27B434462DA7E78B1FF0987D129ED0A4B0A0E56BECEAF8EC221D47150D4675BD"
+# 资源包版本标记：CDN/镜像可能缓存旧包，版本不匹配自动换渠道
+$BundleVersion = "v3"
 # GitHub 加速镜像（国内直连常 504，按顺序尝试；最后一个空串表示直连）
 $GhMirrors   = @("https://ghfast.top/", "https://gh-proxy.com/", "https://ghproxy.net/", "")
 $SendLog     = Join-Path $env:TEMP "send_hk.log"
@@ -134,31 +136,44 @@ function Step-CheckEnv {
 function Step-SetupRepo {
     Write-Info "步骤 2/5：准备资源包与依赖"
 
-    if (-not (Test-Path (Join-Path $RepoDir "pyproject.toml"))) {
+    $versionFile = Join-Path $BundleDir "BUNDLE_VERSION"
+    $needDownload = (-not (Test-Path (Join-Path $RepoDir "pyproject.toml"))) -or
+                    (-not (Test-Path $versionFile)) -or
+                    ((Get-Content $versionFile -Raw -ErrorAction SilentlyContinue).Trim() -ne $BundleVersion)
+    if ($needDownload) {
         Write-Info "下载资源包 hk-watch-location-bundle.zip（约 12MB，自动尝试 CDN 与加速镜像）..."
         New-Item $BundleDir -ItemType Directory -Force | Out-Null
         $zipPath = Join-Path $BundleDir "hk-watch-location-bundle.zip"
         # 候选顺序：jsDelivr CDN -> 加速镜像 -> GitHub 直连
+        # CDN/镜像可能缓存旧版资源包：下载后校验 BUNDLE_VERSION，不匹配则换下一个渠道
         $candidates = @($BundleCdn) + ($GhMirrors | ForEach-Object { "$_$BundleUrl" })
         $ok = $false
         foreach ($u in $candidates) {
             Write-Info "  尝试: $u"
             curl.exe -sL --connect-timeout 15 --max-time 600 -o $zipPath $u
-            if ((Test-Path $zipPath) -and ((Get-Item $zipPath).Length -gt 5000000)) {
-                $ok = $true
-                Write-Ok "  下载成功 ($((Get-Item $zipPath).Length) 字节)"; break
+            if (-not ((Test-Path $zipPath) -and ((Get-Item $zipPath).Length -gt 5000000))) {
+                Write-Warn2 "  下载不完整，换下一个渠道"; continue
             }
+            Write-Ok "  下载成功 ($((Get-Item $zipPath).Length) 字节)"
+            Expand-Archive -Path $zipPath -DestinationPath $BundleDir -Force
+            $ver = if (Test-Path $versionFile) { (Get-Content $versionFile -Raw).Trim() } else { "missing" }
+            if ($ver -ne $BundleVersion -or -not (Test-Path (Join-Path $RepoDir "pyproject.toml"))) {
+                Write-Warn2 "  该渠道资源包版本过旧（$ver），换下一个渠道"
+                Remove-Item $RepoDir -Recurse -Force -ErrorAction SilentlyContinue
+                Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+                continue
+            }
+            $ok = $true; break
         }
-        if (-not $ok) { Write-Err2 "所有下载渠道均失败，请检查网络后重试"; exit 1 }
-
-        Write-Info "解压资源包..."
-        Expand-Archive -Path $zipPath -DestinationPath $BundleDir -Force
+        if (-not $ok) {
+            Write-Err2 "所有渠道均未获取到 $BundleVersion 资源包（CDN 缓存可能未刷新）"
+            Write-Host "  1. 稍等几分钟后重试（jsDelivr 缓存约 12 小时刷新）"
+            Write-Host "  2. 或手动下载 hk-watch-location-bundle.zip 解压到 $BundleDir 后重跑"
+            exit 1
+        }
         Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
-        if (-not (Test-Path (Join-Path $RepoDir "pyproject.toml"))) {
-            Write-Err2 "资源包解压异常，缺少 accessory-location 源码"; exit 1
-        }
-        Write-Ok "资源包已解压：$BundleDir"
-    } else { Write-Ok "资源包已存在：$BundleDir" }
+        Write-Ok "资源包已解压：$BundleDir（版本 $BundleVersion）"
+    } else { Write-Ok "资源包已存在：$BundleDir（版本 $BundleVersion）" }
 
     # 校验包内 APK 的 SHA-256
     if (-not (Test-Path $ApkPath)) { Write-Err2 "资源包中缺少 APK：$ApkPath"; exit 1 }
@@ -227,6 +242,7 @@ function Invoke-Send {
 
     Write-Info "启动 USB 会话，日志：$SendLog"
     Write-Host "-----------------------------------------------------------"
+    Write-Warn2 "【手机操作 0】检查定位权限：设置 - 隐私与安全 - 定位服务 - 华为运动健康，选'使用 App 期间'"
     Write-Warn2 "【手机操作 1】打开 地图 点定位，触发定位订阅"
     Write-Warn2 "【手机操作 2】打开 设置 - 隐私与安全 - 定位服务，关闭定位，等 10 秒后再打开"
     Write-Warn2 "【手机操作 3】再去 健康里设置（健康核对清单 - 高血压管理 - 开通）"
@@ -269,6 +285,13 @@ function Step-Report {
     Write-Host "  1. 地图蓝点移到香港 -> 立即打开健康 -> 右上角用户图标 -> 打开健康核对清单-> 打开高血压通知 -> 开通"
     Write-Host "  2. 开通后按引导开启即时通知"
     Write-Host "  3. 操作完成或会话结束后：.\hk-watch-location.ps1 stop 恢复真实定位"
+    Write-Host ""
+    Write-Warn2 "蓝点已到香港但功能仍打不开时（需多次重试的常见原因排查）："
+    Write-Host "  1. 保持 USB 连接不断开，直接重跑 send 子命令重新发送坐标（幂等，跳过安装）"
+    Write-Host "     会话期间重做定位服务开关（关 10 秒再开），蓝点确认在香港后立刻去健康开通"
+    Write-Host "  2. 检查定位权限：设置 - 隐私与安全 - 定位服务 - 华为运动健康 - 允许'使用 App 期间'"
+    Write-Host "  3. 会话时长默认 30 分钟；会话已结束时蓝点会恢复真实位置，开通必须在会话进行中完成"
+    Write-Host "  4. 每次重试可用 HK_RANDOM='1' 换一个随机香港坐标（个别固定点可能被手机拒绝采纳）"
 }
 
 # ========================= 主流程 =========================

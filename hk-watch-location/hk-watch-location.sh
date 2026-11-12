@@ -29,7 +29,7 @@ set -euo pipefail
 # ========================= 可配置参数 =========================
 DEFAULT_LAT=22.3193          # 香港纬度
 DEFAULT_LON=114.1694         # 香港经度
-DURATION=900                 # 会话时长（秒），留足操作手机的时间
+DURATION=1800                 # 会话时长（秒），留足蓝点到香港后在健康里开通功能的时间
 # 离线资源包：accessory-location 源码（已去除 .git）+ DiPlay v0.2.7 APK，
 # 随本仓库一起提交，运行时直接下载 zip 解压，无需克隆 GitHub 仓库
 BUNDLE_URL="https://raw.githubusercontent.com/siruoren/Proxy_List/main/hk-watch-location/hk-watch-location-bundle.zip"
@@ -42,6 +42,7 @@ IDENTITY_DIR="${HOME}/Library/Application Support/accessory-location/identity"
 PYPI_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 # 包内 DiPlay v0.2.7 APK（含共享实验性 MFi 身份），解压后 SHA-256 必须匹配
 APK_SHA256="27b434462da7e78b1ff0987d129ed0a4b0a0e56beceaf8ec221d47150d4675bd"
+EXPECTED_BUNDLE_VERSION="v3"  # 资源包版本标记：CDN/镜像可能缓存旧包，版本不匹配自动换渠道
 # GitHub 加速镜像（国内直连常 504，按顺序尝试；最后一个空串表示直连）
 GH_MIRRORS=("https://ghfast.top/" "https://gh-proxy.com/" "https://ghproxy.net/" "")
 SEND_LOG="/tmp/send_hk.log"
@@ -110,33 +111,41 @@ check_env() {
 setup_repo() {
     c_info "步骤 2/5：准备资源包与依赖"
 
-    if [ ! -f "${REPO_DIR}/pyproject.toml" ]; then
+    if [ ! -f "${REPO_DIR}/pyproject.toml" ] || [ "$(cat "${BUNDLE_DIR}/BUNDLE_VERSION" 2>/dev/null || echo missing)" != "${EXPECTED_BUNDLE_VERSION}" ]; then
         c_info "下载资源包 hk-watch-location-bundle.zip（约 12MB，自动尝试 CDN 与加速镜像）..."
         mkdir -p "${BUNDLE_DIR}"
         local zip_path="${BUNDLE_DIR}/hk-watch-location-bundle.zip"
         # 候选顺序：jsDelivr CDN → 加速镜像 → GitHub 直连
+        # CDN/镜像可能缓存旧版资源包：下载后校验 BUNDLE_VERSION，不匹配则换下一个渠道
         local candidates=("${BUNDLE_CDN}")
-        local m u
+        local m u ok=1 ver
         for m in "${GH_MIRRORS[@]}"; do candidates+=("${m}${BUNDLE_URL}"); done
-        local ok=1
         for u in "${candidates[@]}"; do
             c_info "  尝试: ${u}"
-            if curl -sL --connect-timeout 15 --max-time 600 \
+            curl -sL --connect-timeout 15 --max-time 600 \
                  -o "$zip_path" -H "User-Agent: hk-watch-location" \
-                 "${u}" \
-               && [ "$(stat -f%z "$zip_path")" -gt 5000000 ]; then
-                ok=0; c_ok "  下载成功 ($(stat -f%z "$zip_path") 字节)"; break
+                 "${u}" || continue
+            [ "$(stat -f%z "$zip_path")" -gt 5000000 ] || { c_warn "  下载不完整，换下一个渠道"; continue; }
+            c_ok "  下载成功 ($(stat -f%z "$zip_path") 字节)"
+            unzip -oq "$zip_path" -d "${BUNDLE_DIR}"
+            ver="$(cat "${BUNDLE_DIR}/BUNDLE_VERSION" 2>/dev/null || echo missing)"
+            if [ "$ver" != "${EXPECTED_BUNDLE_VERSION}" ] || [ ! -f "${REPO_DIR}/pyproject.toml" ]; then
+                c_warn "  该渠道资源包版本过旧（${ver}），换下一个渠道"
+                rm -rf "${REPO_DIR}" "$zip_path"
+                continue
             fi
+            ok=0; break
         done
-        [ "$ok" -eq 0 ] || { c_err "所有下载渠道均失败，请检查网络后重试"; exit 1; }
-
-        c_info "解压资源包..."
-        unzip -oq "$zip_path" -d "${BUNDLE_DIR}"
+        if [ "$ok" -ne 0 ]; then
+            c_err "所有渠道均未获取到 v${EXPECTED_BUNDLE_VERSION} 资源包（CDN 缓存可能未刷新）"
+            echo "  1. 稍等几分钟后重试（jsDelivr 缓存约 12 小时刷新）"
+            echo "  2. 或手动下载 hk-watch-location-bundle.zip 解压到 ${BUNDLE_DIR} 后重跑"
+            exit 1
+        fi
         rm -f "$zip_path"
-        [ -f "${REPO_DIR}/pyproject.toml" ] || { c_err "资源包解压异常，缺少 accessory-location 源码"; exit 1; }
-        c_ok "资源包已解压：${BUNDLE_DIR}"
+        c_ok "资源包已解压：${BUNDLE_DIR}（版本 ${EXPECTED_BUNDLE_VERSION}）"
     else
-        c_ok "资源包已存在：${BUNDLE_DIR}"
+        c_ok "资源包已存在：${BUNDLE_DIR}（版本 ${EXPECTED_BUNDLE_VERSION}）"
     fi
 
     # 校验包内 APK 的 SHA-256
@@ -244,6 +253,7 @@ do_send() {
     cd "${REPO_DIR}"
     c_info "启动 USB 会话，日志：${SEND_LOG}（进程超时或 Ctrl-C 自动结束）"
     echo "-----------------------------------------------------------"
+    c_warn "【手机操作 0】检查定位权限：设置 → 隐私与安全 → 定位服务 → 华为运动健康，选'使用 App 期间'"
     c_warn "【手机操作 1】打开 地图 点定位，触发定位订阅"
     c_warn "【手机操作 2】打开 设置 → 隐私与安全 → 定位服务，关闭定位，等 10 秒后再打开"
     c_warn "【手机操作 3】再去 健康里设置（健康核对清单 → 高血压管理 → 开通）"
@@ -284,6 +294,13 @@ report() {
     echo "  1. 地图蓝点移到香港 -> 立即打开健康 -> 右上角用户图标 -> 打开健康核对清单-> 打开高血压通知 -> 开通"
     echo "  2. 开通后按引导开启即时通知"
     echo "  3. 操作完成或会话结束后：本脚本 stop 恢复真实定位"
+    echo
+    c_warn "蓝点已到香港但功能仍打不开时（需多次重试的常见原因排查）："
+    echo "  1. 保持 USB 连接不断开，直接重跑本脚本 send 子命令重新发送坐标（幂等，跳过安装）"
+    echo "     会话期间重做定位服务开关（关 10 秒再开），蓝点确认在香港后立刻去健康开通"
+    echo "  2. 检查定位权限：设置 → 隐私与安全 → 定位服务 → 华为运动健康 → 允许'使用 App 期间'"
+    echo "  3. 会话时长默认 30 分钟；会话已结束时蓝点会恢复真实位置，开通必须在会话进行中完成"
+    echo "  4. 每次重试可用 HK_RANDOM=1 换一个随机香港坐标（个别固定点可能被手机拒绝采纳）"
 }
 
 # ========================= 主流程 =========================

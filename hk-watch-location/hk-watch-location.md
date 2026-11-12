@@ -29,7 +29,7 @@ powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.p
 powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.ps1 stop     # 恢复真实定位
 ```
 
-可选参数（两个脚本一致）：`run|send` 后可跟 `纬度 经度 时长秒`，默认 `22.3193 114.1694 900`。
+可选参数（两个脚本一致）：`run|send` 后可跟 `纬度 经度 时长秒`，默认 `22.3193 114.1694 1800`（30 分钟）。
 设置环境变量 `HK_RANDOM=1`（Windows 先执行 `$env:HK_RANDOM='1'`）且不显式传坐标时，
 每次运行随机生成香港市区坐标（纬 22.24~22.45、经 113.95~114.30，覆盖港岛/九龙/新界）——
 默认固定坐标蓝点不动时可以改用随机模式。
@@ -93,3 +93,9 @@ powershell -ExecutionPolicy Bypass -File .\hk-watch-location\hk-watch-location.p
   `~/.cache/hk-watch-location/` 后重跑
 - **认证失败（无 authentication_succeeded）**：DiPlay 共享身份可能已被苹果吊销，属预期风险
 - **蓝点不动**：手机定位服务开关一次再触发；确认手机插着 USB 线且脚本在运行中
+- **蓝点到香港但功能打不开（需多次重试）**：开通必须在会话进行中完成（默认 30 分钟）；
+  保持 USB 连接重跑 `send`，期间重做定位服务开关；检查华为运动健康的定位权限
+  （设置 → 隐私与安全 → 定位服务 → 华为运动健康 → 使用 App 期间）；
+  每次重试可用 `HK_RANDOM=1` 换随机香港坐标
+- **资源包版本过旧（uv sync 报 README.md 缺失）**：CDN 缓存未刷新（约 12 小时）。
+  脚本会校验包内 BUNDLE_VERSION（当前 v3），不匹配自动换渠道；全部渠道都旧时按提示手动下载放置
