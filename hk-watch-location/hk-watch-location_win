@@ -1,6 +1,6 @@
 ﻿# hk-watch-location.ps1 - 一键脚本：通过 USB 向 iPhone 发送香港坐标（iAP2 配件定位）[Windows 版]
 #
-# 用途：配合华为手表"高血压管理"等地区限定功能的开通（不使用 AnyGo）
+# 用途：配合手表"高血压管理"等地区限定功能的开通（不使用 AnyGo）
 # 原理：accessory-location 通过 USB iAP2 协议完成 MFi-v3 认证后，
 #       向 iPhone 发送 GGA/RMC 坐标，iPhone 将其作为外部定位源采纳。
 #
@@ -15,7 +15,7 @@
 #      —— 它提供 usbmuxd 服务（Apple Mobile Device Service，本地端口 27015），
 #         pymobiledevice3 在 Windows 上依赖它访问 iPhone
 #   2. iPhone 用数据线连接，已解锁并点击"信任此电脑"
-#   3. 发送期间在手机上打开 地图/华为运动健康 触发定位请求
+#   3. 发送期间在手机上打开 地图/运动健康 触发定位请求
 
 param(
     [Parameter(Position = 0)][string]$Command = "run",

@@ -10,7 +10,7 @@ hk-watch-location.sh
 ./hk-watch-location/hk-watch-location.sh send       # 跳过安装步骤，直接发送
 ./hk-watch-location/hk-watch-location.sh stop       # 停止发送，恢复真实定位
 ```
-运行时手机需解锁并已信任电脑；发送阶段打开地图触发定位订阅，蓝点到香港后立刻在华为运动健康里开通高血压功能和即时通知。
+运行时手机需解锁并已信任电脑；发送阶段打开地图触发定位订阅，蓝点到香港后立刻在运动健康里开通高血压功能和即时通知。
 
 
 
