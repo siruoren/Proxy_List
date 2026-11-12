@@ -26,7 +26,7 @@ param(
 
 # ========================= 可配置参数 =========================
 $RepoDir     = Join-Path $env:USERPROFILE "hk-watch-location\accessory-location"
-$RepoUrl     = "https://github.com/aur3l14no/accessory-location.git"
+$RepoUrl     = "https://github.com/siruoren/accessory-location.git"
 $IdentityDir = Join-Path $env:APPDATA "accessory-location\identity"
 $PyPiMirror  = "https://pypi.tuna.tsinghua.edu.cn/simple"
 # DiPlay v0.2.7 APK（含共享实验性 MFi 身份），SHA-256 必须匹配

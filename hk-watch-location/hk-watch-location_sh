@@ -24,7 +24,7 @@ DEFAULT_LAT=22.3193          # 香港纬度
 DEFAULT_LON=114.1694         # 香港经度
 DURATION=900                 # 会话时长（秒），留足操作手机的时间
 REPO_DIR="${HOME}/Documents/Trae-CN/temp_20261109_01/accessory-location"
-REPO_URL="https://github.com/aur3l14no/accessory-location.git"
+REPO_URL="https://github.com/siruoren/accessory-location.git"
 IDENTITY_DIR="${HOME}/Library/Application Support/accessory-location/identity"
 PYPI_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 # DiPlay v0.2.7 APK（含共享实验性 MFi 身份），SHA-256 必须匹配
