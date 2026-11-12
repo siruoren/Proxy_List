@@ -57,7 +57,7 @@ function Invoke-Stop {
     Write-Host ""
     Write-Warn2 "恢复手机真实定位，请在 iPhone 上操作："
     Write-Host "  1. 拔掉 USB 线"
-    Write-Host "  2. 设置 - 隐私与安全性 - 定位服务 - 关闭 10 秒后再打开"
+    Write-Host "  2. 设置 - 隐私与安全 - 定位服务 关 10 秒再开，回地图重新定位"
     Write-Host "  3. 打开地图重新定位，确认蓝点回到真实位置"
 }
 
@@ -186,7 +186,7 @@ function Invoke-Send {
     Write-Info "启动 USB 会话，日志：$SendLog"
     Write-Host "-----------------------------------------------------------"
     Write-Warn2 "现在请在 iPhone 上：打开地图点定位（触发订阅）"
-    Write-Warn2 "蓝点不动时：设置 - 定位服务 关 10 秒再开，回地图重新定位"
+    Write-Warn2 "蓝点不动时：设置 - 隐私与安全 - 定位服务 关 10 秒再开，回地图重新定位"
     Write-Host "-----------------------------------------------------------"
 
     Push-Location $RepoDir
@@ -222,7 +222,7 @@ function Step-Report {
 
     Write-Host ""
     Write-Info "验证与后续操作："
-    Write-Host "  1. 地图蓝点移到香港 -> 立即打开华为运动健康 -> 设备 -> 高血压管理 -> 开通"
+    Write-Host "  1. 地图蓝点移到香港 -> 立即健康 → 右上角头像 → 健康清单 → 高血压管理 → 开通"
     Write-Host "  2. 开通后按引导开启即时通知"
     Write-Host "  3. 操作完成或会话结束后：.\hk-watch-location.ps1 stop 恢复真实定位"
 }
