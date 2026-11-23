@@ -1,11 +1,18 @@
 # Parallels Desktop 屏蔽列表 (hosts)
 # 用法: 追加到 /etc/hosts 以阻断 Parallels Desktop 的更新/激活/遥测/商城等网络访问
+# 来源: ParallelsDesktopCrack(somebasj) / Parallels官方KB113744 / huhamhire-hosts 等公开清单整理
 
 # --- 主域名 ---
 127.0.0.1 parallels.com
 127.0.0.1 parallels.cn
+127.0.0.1 parallels.de
+127.0.0.1 parallels.es
+127.0.0.1 parallels.fr
+127.0.0.1 parallels.nl
+127.0.0.1 parallels.pt
+127.0.0.1 parallels.ru
+127.0.0.1 parallelskorea.com
 127.0.0.1 myparallels.com
-127.0.0.1 myparallels.cn
 
 # --- 下载 / 更新 ---
 127.0.0.1 download.parallels.com
@@ -16,17 +23,29 @@
 127.0.0.1 desktop.parallels.com
 127.0.0.1 desktop.parallels.cn
 
+# --- CDN 回退域名 (download/update/desktop 的 cloudflare CDN 别名) ---
+127.0.0.1 download.parallels.com.cdn.cloudflare.net
+127.0.0.1 update.parallels.com.cdn.cloudflare.net
+127.0.0.1 desktop.parallels.com.cdn.cloudflare.net
+
 # --- 账户 / 激活 / 授权 ---
 127.0.0.1 account.parallels.com
 127.0.0.1 account.parallels.cn
 127.0.0.1 my.parallels.com
+127.0.0.1 pax-manager.myparallels.com
 127.0.0.1 licensing.parallels.com
+127.0.0.1 license.parallels.com
 127.0.0.1 activation.parallels.com
+127.0.0.1 registration.parallels.com
 127.0.0.1 preorders.parallels.com
 127.0.0.1 pax01.parallels.com
 127.0.0.1 tlnvas400.parallels.com
 
-# --- 授权校验网关 (gk) ---
+# --- 黑名单/许可校验网关 (官方KB与历史清单确认) ---
+127.0.0.1 pdfm.blist.parallels.com
+127.0.0.1 pdfm.vl.parallels.com
+127.0.0.1 pd6.blist.parallels.com
+127.0.0.1 pd7.blist.parallels.com
 127.0.0.1 gk.parallels.com
 127.0.0.1 gk86.parallels.com
 
@@ -62,18 +81,20 @@
 # --- www 各区域站点 ---
 127.0.0.1 www.parallels.com
 127.0.0.1 www.parallels.cn
-127.0.0.1 www.parallels.com.au
 127.0.0.1 www.parallels.de
-127.0.0.1 www.parallels.fr
-127.0.0.1 www.parallels.co.uk
-127.0.0.1 www.parallels.ru
-127.0.0.1 www.parallels.jp
 127.0.0.1 www.parallels.es
-127.0.0.1 www.parallels.it
+127.0.0.1 www.parallels.fr
 127.0.0.1 www.parallels.nl
+127.0.0.1 www.parallels.pt
+127.0.0.1 www.parallels.ru
+127.0.0.1 www.parallels.com.au
+127.0.0.1 www.parallels.co.uk
+127.0.0.1 www.parallels.jp
+127.0.0.1 www.parallels.it
 127.0.0.1 www.parallels.pl
 127.0.0.1 www.parallels.com.br
 127.0.0.1 www.parallels.com.tr
 127.0.0.1 www.parallels.tw
 127.0.0.1 www.parallels.hk
 127.0.0.1 www.parallels.kr
+127.0.0.1 www.parallelskorea.com
