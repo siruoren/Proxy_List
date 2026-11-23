@@ -1,65 +1,151 @@
-# Parallels Desktop 屏蔽列表 (hosts)
-# 用法: 追加到 /etc/hosts 以阻断 Parallels Desktop 的更新/激活/遥测/商城等网络访问
-# 来源: ParallelsDesktopCrack(somebasj) / Parallels官方KB113744 / huhamhire-hosts 等公开清单整理
+# Parallels Desktop 全量域名屏蔽列表 (/etc/hosts)
+# ==============================================================================
+# 目标: 阻断 Parallels Desktop 的 激活校验 / 更新 / 许可心跳 / 遥测上报 / 商城 网络访问
+# 整理日期: 2026-11-23
+#
+# 来源(4 路交叉验证):
+#   1. 本机应用二进制字符串提取 —— Parallels Desktop 20.4.1
+#      /Applications/Parallels Desktop.app (prl_client_app, prl_disp_service, prl_updater_ctl)
+#      实测命中: account / desktop / kb / link / my / reports / reportus / static / support /
+#                update / www.parallels.com / www.parallels.cn / com.parallels.de
+#      本机配置文件命中的接口: https://pax-manager.myparallels.com/xmlrpc/rpc.do
+#   2. Parallels 官方 KB 128971《Communication Ports and Hosts for Parallels Desktop for Mac》
+#      Licensing=desktop / Activation=license / Account=account / 技术报告=reportus /
+#      反馈=support / 帮助文档=www / 企业版管理 API=pda-api，中国区走 *.parallels.cn
+#   3. Parallels 官方 KB 113744 / 113745 / 130008（激活失败、更新失败、系统状态页）
+#      官方明确点名的 hosts 条目: pdfm.blist / pdfm.vl / account / desktop / license /
+#       registration / update / reportus / my / buy / status / forum
+#   4. 公开社区清单: ParallelsDesktopCrack(somebasj) / hlombroso gist / CAND3REL gist
+#      （download+update+desktop 的 cloudflare CDN 别名、区域 www 站、myparallels、pax-manager）
+#
+# 说明: 未解析(已下线)的历史域名一并保留 —— 屏蔽不存在的域名无副作用，
+#       但能覆盖旧版本 PD / 回滚版本 / 分区域解析的情况。
+# ==============================================================================
 
-# --- 主域名 ---
+# --- 1. 主域与区域门户站 ---
 127.0.0.1 parallels.com
 127.0.0.1 parallels.cn
 127.0.0.1 parallels.de
 127.0.0.1 parallels.es
 127.0.0.1 parallels.fr
+127.0.0.1 parallels.it
+127.0.0.1 parallels.jp
+127.0.0.1 parallels.kr
 127.0.0.1 parallels.nl
+127.0.0.1 parallels.pl
 127.0.0.1 parallels.pt
 127.0.0.1 parallels.ru
+127.0.0.1 parallels.tw
+127.0.0.1 parallels.hk
+127.0.0.1 parallels.com.au
+127.0.0.1 parallels.com.br
+127.0.0.1 parallels.co.uk
+127.0.0.1 parallels.com.tr
 127.0.0.1 parallelskorea.com
 127.0.0.1 myparallels.com
 
-# --- 下载 / 更新 ---
+# --- 2. www 各区域站点 ---
+127.0.0.1 www.parallels.com
+127.0.0.1 www.parallels.cn
+127.0.0.1 www.parallels.de
+127.0.0.1 www.parallels.es
+127.0.0.1 www.parallels.fr
+127.0.0.1 www.parallels.it
+127.0.0.1 www.parallels.jp
+127.0.0.1 www.parallels.kr
+127.0.0.1 www.parallels.nl
+127.0.0.1 www.parallels.pl
+127.0.0.1 www.parallels.pt
+127.0.0.1 www.parallels.ru
+127.0.0.1 www.parallels.tw
+127.0.0.1 www.parallels.hk
+127.0.0.1 www.parallels.com.au
+127.0.0.1 www.parallels.com.br
+127.0.0.1 www.parallels.co.uk
+127.0.0.1 www.parallels.com.tr
+127.0.0.1 www.parallelskorea.com
+127.0.0.1 www.myparallels.com
+
+# --- 3. 官方 KB128971 通信主机（国际 + 中国区） ---
+# Licensing（许可心跳/校验）
+127.0.0.1 desktop.parallels.com
+127.0.0.1 desktop.parallels.cn
+# Activation（激活）
+127.0.0.1 license.parallels.com
+127.0.0.1 license.parallels.cn
+# Account management（账号登陆/SSO）
+127.0.0.1 account.parallels.com
+127.0.0.1 account.parallels.cn
+# My Account 门户（KB130008 点名入口 https://my.parallels.com）
+127.0.0.1 my.parallels.com
+127.0.0.1 my.parallels.cn
+# Technical data reports（技术数据上报 = 遥测）
+127.0.0.1 reportus.parallels.com
+127.0.0.1 reportus.parallels.cn
+# Sending feedback（反馈/崩溃报告）
+127.0.0.1 support.parallels.com
+127.0.0.1 support.parallels.cn
+# 企业版管理 API
+127.0.0.1 pda-api.parallels.com
+127.0.0.1 pda-api.parallels.cn
+
+# --- 4. 下载 / 更新通道 ---
 127.0.0.1 download.parallels.com
 127.0.0.1 download.parallels.cn
+127.0.0.1 downloads.parallels.com
+127.0.0.1 downloads.parallels.cn
 127.0.0.1 update.parallels.com
 127.0.0.1 update.parallels.cn
 127.0.0.1 version.parallels.com
-127.0.0.1 desktop.parallels.com
-127.0.0.1 desktop.parallels.cn
+127.0.0.1 version.parallels.cn
 
-# --- CDN 回退域名 (download/update/desktop 的 cloudflare CDN 别名) ---
+# --- 5. CDN 回退别名（download/update/desktop/reportus 的 cloudflare CNAME） ---
 127.0.0.1 download.parallels.com.cdn.cloudflare.net
+127.0.0.1 download.parallels.cn.cdn.cloudflare.net
 127.0.0.1 update.parallels.com.cdn.cloudflare.net
+127.0.0.1 update.parallels.cn.cdn.cloudflare.net
 127.0.0.1 desktop.parallels.com.cdn.cloudflare.net
+127.0.0.1 desktop.parallels.cn.cdn.cloudflare.net
+127.0.0.1 reportus.parallels.com.cdn.cloudflare.net
+127.0.0.1 static.parallels.com.cdn.cloudflare.net
+127.0.0.1 parallels.com.cdn.cloudflare.net
 
-# --- 账户 / 激活 / 授权 ---
-127.0.0.1 account.parallels.com
-127.0.0.1 account.parallels.cn
-127.0.0.1 my.parallels.com
-127.0.0.1 pax-manager.myparallels.com
-127.0.0.1 licensing.parallels.com
-127.0.0.1 license.parallels.com
-127.0.0.1 activation.parallels.com
-127.0.0.1 registration.parallels.com
-127.0.0.1 preorders.parallels.com
-127.0.0.1 pax01.parallels.com
-127.0.0.1 tlnvas400.parallels.com
-
-# --- 黑名单/许可校验网关 (官方KB与历史清单确认) ---
+# --- 6. 激活/许可校验网关（黑名单 blist / VoIP 授权 / 老版本网关） ---
 127.0.0.1 pdfm.blist.parallels.com
 127.0.0.1 pdfm.vl.parallels.com
+127.0.0.1 pdfm7.blist.parallels.com
+127.0.0.1 pdfm7.vl.parallels.com
 127.0.0.1 pd6.blist.parallels.com
 127.0.0.1 pd7.blist.parallels.com
+127.0.0.1 pd8.blist.parallels.com
+127.0.0.1 registration.parallels.com
+127.0.0.1 registration.parallels.cn
+127.0.0.1 activation.parallels.com
+127.0.0.1 activation.parallels.cn
+127.0.0.1 licensing.parallels.com
+127.0.0.1 licensing.parallels.cn
 127.0.0.1 gk.parallels.com
 127.0.0.1 gk86.parallels.com
+127.0.0.1 pax01.parallels.com
+127.0.0.1 pax-manager.myparallels.com
+127.0.0.1 pax.parallels.com
+127.0.0.1 tlnvas400.parallels.com
 
-# --- 遥测 / 上报 / 追踪 ---
-127.0.0.1 reportus.parallels.com
+# --- 7. 遥测 / 上报 / 追踪 ---
+127.0.0.1 reports.parallels.com
 127.0.0.1 report.parallels.com
 127.0.0.1 tracking.parallels.com
+127.0.0.1 telemetry.parallels.com
+127.0.0.1 metrics.parallels.com
 127.0.0.1 feedback.parallels.com
 127.0.0.1 survey.parallels.com
 127.0.0.1 eng.parallels.com
 
-# --- 商城 / 营销 / 推广 ---
+# --- 8. 商城 / 营销 / 推广 ---
+127.0.0.1 buy.parallels.com
 127.0.0.1 shop.parallels.com
 127.0.0.1 store.parallels.com
+127.0.0.1 preorders.parallels.com
 127.0.0.1 marketing.parallels.com
 127.0.0.1 info.parallels.com
 127.0.0.1 go.parallels.com
@@ -69,32 +155,30 @@
 127.0.0.1 buttons.parallels.com
 127.0.0.1 pdfm.parallels.com
 
-# --- 静态资源 / API / CDN ---
+# --- 9. 静态资源 / API / 边缘节点 ---
 127.0.0.1 static.parallels.com
+127.0.0.1 static.parallels.cn
 127.0.0.1 cdn.parallels.com
 127.0.0.1 images.parallels.com
 127.0.0.1 api.parallels.com
 127.0.0.1 sdk.parallels.com
 127.0.0.1 aurora.parallels.com
 127.0.0.1 tor.parallels.com
+127.0.0.1 link.parallels.com
 
-# --- www 各区域站点 ---
-127.0.0.1 www.parallels.com
-127.0.0.1 www.parallels.cn
-127.0.0.1 www.parallels.de
-127.0.0.1 www.parallels.es
-127.0.0.1 www.parallels.fr
-127.0.0.1 www.parallels.nl
-127.0.0.1 www.parallels.pt
-127.0.0.1 www.parallels.ru
-127.0.0.1 www.parallels.com.au
-127.0.0.1 www.parallels.co.uk
-127.0.0.1 www.parallels.jp
-127.0.0.1 www.parallels.it
-127.0.0.1 www.parallels.pl
-127.0.0.1 www.parallels.com.br
-127.0.0.1 www.parallels.com.tr
-127.0.0.1 www.parallels.tw
-127.0.0.1 www.parallels.hk
-127.0.0.1 www.parallels.kr
-127.0.0.1 www.parallelskorea.com
+# --- 10. 帮助 / 文档 / 社区 / 状态页 ---
+127.0.0.1 kb.parallels.com
+127.0.0.1 docs.parallels.com
+127.0.0.1 forum.parallels.com
+127.0.0.1 status.parallels.com
+127.0.0.1 blog.parallels.com
+
+# --- 11. 内部/边缘域（应用内出现 forum-staging.prls.net） ---
+127.0.0.1 prls.net
+127.0.0.1 forum-staging.prls.net
+127.0.0.1 www.prls.net
+
+# --- 12. 付费链路（按需解注释） ---
+127.0.0.1 parallels-s.cleverbridge.com
+127.0.0.1 cleverbridge.com
+
