@@ -1,15 +1,79 @@
+# Parallels Desktop 屏蔽列表 (hosts)
+# 用法: 追加到 /etc/hosts 以阻断 Parallels Desktop 的更新/激活/遥测/商城等网络访问
+
+# --- 主域名 ---
+127.0.0.1 parallels.com
+127.0.0.1 parallels.cn
+127.0.0.1 myparallels.com
+127.0.0.1 myparallels.cn
+
+# --- 下载 / 更新 ---
 127.0.0.1 download.parallels.com
 127.0.0.1 download.parallels.cn
 127.0.0.1 update.parallels.com
 127.0.0.1 update.parallels.cn
+127.0.0.1 version.parallels.com
 127.0.0.1 desktop.parallels.com
 127.0.0.1 desktop.parallels.cn
+
+# --- 账户 / 激活 / 授权 ---
 127.0.0.1 account.parallels.com
 127.0.0.1 account.parallels.cn
-127.0.0.1 www.parallels.cn
-127.0.0.1 www.parallels.com
+127.0.0.1 my.parallels.com
+127.0.0.1 licensing.parallels.com
+127.0.0.1 activation.parallels.com
+127.0.0.1 preorders.parallels.com
+127.0.0.1 pax01.parallels.com
+127.0.0.1 tlnvas400.parallels.com
+
+# --- 授权校验网关 (gk) ---
+127.0.0.1 gk.parallels.com
+127.0.0.1 gk86.parallels.com
+
+# --- 遥测 / 上报 / 追踪 ---
 127.0.0.1 reportus.parallels.com
-127.0.0.1 parallels.com
-127.0.0.1 parallels.cn
-127.0.0.1 myparallels.com
+127.0.0.1 report.parallels.com
+127.0.0.1 tracking.parallels.com
+127.0.0.1 feedback.parallels.com
+127.0.0.1 survey.parallels.com
+127.0.0.1 eng.parallels.com
+
+# --- 商城 / 营销 / 推广 ---
+127.0.0.1 shop.parallels.com
+127.0.0.1 store.parallels.com
+127.0.0.1 marketing.parallels.com
+127.0.0.1 info.parallels.com
+127.0.0.1 go.parallels.com
+127.0.0.1 links.parallels.com
+127.0.0.1 click.parallels.com
+127.0.0.1 email.parallels.com
+127.0.0.1 buttons.parallels.com
+127.0.0.1 pdfm.parallels.com
+
+# --- 静态资源 / API / CDN ---
 127.0.0.1 static.parallels.com
+127.0.0.1 cdn.parallels.com
+127.0.0.1 images.parallels.com
+127.0.0.1 api.parallels.com
+127.0.0.1 sdk.parallels.com
+127.0.0.1 aurora.parallels.com
+127.0.0.1 tor.parallels.com
+
+# --- www 各区域站点 ---
+127.0.0.1 www.parallels.com
+127.0.0.1 www.parallels.cn
+127.0.0.1 www.parallels.com.au
+127.0.0.1 www.parallels.de
+127.0.0.1 www.parallels.fr
+127.0.0.1 www.parallels.co.uk
+127.0.0.1 www.parallels.ru
+127.0.0.1 www.parallels.jp
+127.0.0.1 www.parallels.es
+127.0.0.1 www.parallels.it
+127.0.0.1 www.parallels.nl
+127.0.0.1 www.parallels.pl
+127.0.0.1 www.parallels.com.br
+127.0.0.1 www.parallels.com.tr
+127.0.0.1 www.parallels.tw
+127.0.0.1 www.parallels.hk
+127.0.0.1 www.parallels.kr
