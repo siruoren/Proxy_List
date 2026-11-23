@@ -2,25 +2,6 @@
 # ==============================================================================
 # 目标: 阻断 Parallels Desktop 的 激活校验 / 更新 / 许可心跳 / 遥测上报 / 商城 网络访问
 # 整理日期: 2026-11-23
-#
-# 来源(4 路交叉验证):
-#   1. 本机应用二进制字符串提取 —— Parallels Desktop 20.4.1
-#      /Applications/Parallels Desktop.app (prl_client_app, prl_disp_service, prl_updater_ctl)
-#      实测命中: account / desktop / kb / link / my / reports / reportus / static / support /
-#                update / www.parallels.com / www.parallels.cn / com.parallels.de
-#      本机配置文件命中的接口: https://pax-manager.myparallels.com/xmlrpc/rpc.do
-#   2. Parallels 官方 KB 128971《Communication Ports and Hosts for Parallels Desktop for Mac》
-#      Licensing=desktop / Activation=license / Account=account / 技术报告=reportus /
-#      反馈=support / 帮助文档=www / 企业版管理 API=pda-api，中国区走 *.parallels.cn
-#   3. Parallels 官方 KB 113744 / 113745 / 130008（激活失败、更新失败、系统状态页）
-#      官方明确点名的 hosts 条目: pdfm.blist / pdfm.vl / account / desktop / license /
-#       registration / update / reportus / my / buy / status / forum
-#   4. 公开社区清单: ParallelsDesktopCrack(somebasj) / hlombroso gist / CAND3REL gist
-#      （download+update+desktop 的 cloudflare CDN 别名、区域 www 站、myparallels、pax-manager）
-#
-# 说明: 未解析(已下线)的历史域名一并保留 —— 屏蔽不存在的域名无副作用，
-#       但能覆盖旧版本 PD / 回滚版本 / 分区域解析的情况。
-# ==============================================================================
 
 # --- 1. 主域与区域门户站 ---
 127.0.0.1 parallels.com
