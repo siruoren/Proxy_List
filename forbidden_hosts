@@ -1,6 +1,13 @@
-# Parallels Desktop 全量域名屏蔽列表 (/etc/hosts)
 # ==============================================================================
-# 目标: 阻断 Parallels Desktop 的 激活校验 / 更新 / 许可心跳 / 遥测上报 / 商城 网络访问
+# 多应用统一域名屏蔽列表 (/etc/hosts) — 按 App 分节维护
+# ==============================================================================
+# 规则: 新增应用的屏蔽域名一律追加到本文件末尾，并以 "App: xxx" 分节头标注
+# 应用方式: sudo cat forbidden_hosts >> /etc/hosts
+#           sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+
+# ##############################################################################
+# App: Parallels Desktop (虚拟机)
+# 目标: 阻断 激活校验 / 更新 / 许可心跳 / 遥测上报 / 商城 网络访问
 # 整理日期: 2026-11-23
 
 # --- 1. 主域与区域门户站 ---
@@ -163,3 +170,20 @@
 127.0.0.1 parallels-s.cleverbridge.com
 127.0.0.1 cleverbridge.com
 
+# ##############################################################################
+# App: App Cleaner & Uninstaller (Nektony, Mac 清理卸载工具)
+# 目标: 阻断 官网访问 / 安装包下载 / 激活验证 / 支付订阅
+# 来源: nektony.com 官网页面实际链接确认 (2026-11-23)
+
+# --- 官网主站 (含营销/帮助/激活验证接口) ---
+127.0.0.1 nektony.com
+127.0.0.1 www.nektony.com
+
+# --- 安装包 / 更新下载 ---
+127.0.0.1 download.nektony.com
+
+# --- 支付与许可管理 (PayPro Global, 购买/订阅/密钥找回) ---
+127.0.0.1 payproglobal.com
+127.0.0.1 www.payproglobal.com
+127.0.0.1 cc.payproglobal.com
+127.0.0.1 store.payproglobal.com
