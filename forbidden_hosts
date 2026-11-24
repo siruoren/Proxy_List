@@ -187,3 +187,26 @@
 127.0.0.1 www.payproglobal.com
 127.0.0.1 cc.payproglobal.com
 127.0.0.1 store.payproglobal.com
+
+# ##############################################################################
+# App: AlDente (AppHouseKitchen, MacBook 电池充电限制工具)
+# 目标: 阻断 官网访问 / DMG下载与更新检查 / 许可证验证(30天周期) / 支付
+# 来源: apphousekitchen.com 官网 FAQ 实际链接确认 (2026-11-24)
+# 注意: Pro 版许可证最多每 30 天联网验证一次，断网超期自动降级为免费版
+
+# --- 官网主站 (DMG 直链 https://apphousekitchen.com/aldente/AlDente-Pro.dmg 亦在此域) ---
+127.0.0.1 apphousekitchen.com
+127.0.0.1 www.apphousekitchen.com
+
+# --- 中文官网 (分销/购买/FAQ) ---
+127.0.0.1 aldente.cn
+127.0.0.1 www.aldente.cn
+
+# --- 支付与许可证验证 (Paddle, 商户主体) ---
+# 警告: Paddle 为大量独立开发软件共用支付平台, 屏蔽会影响其他软件的购买/许可
+# 如 AlDente 激活仍可联网通过验证, 再取消注释以下条目
+# 127.0.0.1 paddle.com
+# 127.0.0.1 www.paddle.com
+# 127.0.0.1 api.paddle.com
+# 127.0.0.1 checkout.paddle.com
+# 127.0.0.1 buy.paddle.com
