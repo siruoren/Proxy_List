@@ -205,8 +205,8 @@
 # --- 支付与许可证验证 (Paddle, 商户主体) ---
 # 警告: Paddle 为大量独立开发软件共用支付平台, 屏蔽会影响其他软件的购买/许可
 # 如 AlDente 激活仍可联网通过验证, 再取消注释以下条目
-# 127.0.0.1 paddle.com
-# 127.0.0.1 www.paddle.com
-# 127.0.0.1 api.paddle.com
-# 127.0.0.1 checkout.paddle.com
-# 127.0.0.1 buy.paddle.com
+ 127.0.0.1 paddle.com
+ 127.0.0.1 www.paddle.com
+ 127.0.0.1 api.paddle.com
+ 127.0.0.1 checkout.paddle.com
+ 127.0.0.1 buy.paddle.com
