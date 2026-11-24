@@ -222,6 +222,11 @@
 127.0.0.1 cocoatech.io
 127.0.0.1 www.cocoatech.io
 
+# --- 更新通道 (Sparkle appcast + 正式/测试版 DMG, 实测自应用二进制) ---
+# appcast: https://get.cocoatech.com/appcast.xml
+# DMG:     https://get.cocoatech.com/PathFinder.dmg (含 PathFinder_beta.dmg)
+127.0.0.1 get.cocoatech.com
+
 # --- 旧版官网 (Path Finder 9 及更早的许可证购买/下载) ---
 127.0.0.1 cocoatech.com
 127.0.0.1 www.cocoatech.com
