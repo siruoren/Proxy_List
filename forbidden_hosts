@@ -210,3 +210,21 @@
  127.0.0.1 api.paddle.com
  127.0.0.1 checkout.paddle.com
  127.0.0.1 buy.paddle.com
+
+# ##############################################################################
+# App: Path Finder (Cocoatech, Mac 文件管理器增强工具)
+# 目标: 阻断 官网访问 / DMG下载与更新检查 / 订阅账户验证 / 支付
+# 来源: cocoatech.io 官网与 FAQ 实际链接确认 (2026-11-24)
+# 注意: 新版为订阅制 (邮箱+密码账户验证, 无许可证密钥), 旧版 PF9 为许可证制
+# 支付与订阅验证走 Paddle, 已由 AlDente 分节的 Paddle 条目统一覆盖
+
+# --- 官网主站 (新版站点, DMG 下载 PFX.dmg / 更新检查) ---
+127.0.0.1 cocoatech.io
+127.0.0.1 www.cocoatech.io
+
+# --- 旧版官网 (Path Finder 9 及更早的许可证购买/下载) ---
+127.0.0.1 cocoatech.com
+127.0.0.1 www.cocoatech.com
+
+# --- 技术支持站点 (Zendesk, 注册/激活排障) ---
+127.0.0.1 support.cocoatech.com
