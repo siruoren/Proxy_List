@@ -31,6 +31,27 @@
 
 set -euo pipefail
 
+# Retry a curl command up to MAX_RETRIES times (i.e. 1 initial attempt plus
+# MAX_RETRIES-1 retries) with a short backoff between attempts. Returns the
+# last exit code if every attempt fails.
+MAX_RETRIES=3
+curl_with_retry() {
+    local attempt=1
+    local rc=0
+    while [ "$attempt" -le "$MAX_RETRIES" ]; do
+        if "$@"; then
+            return 0
+        fi
+        rc=$?
+        echo "Warning: attempt ${attempt}/${MAX_RETRIES} failed (exit ${rc})." >&2
+        if [ "$attempt" -lt "$MAX_RETRIES" ]; then
+            sleep $((attempt * 2))
+        fi
+        attempt=$((attempt + 1))
+    done
+    return "$rc"
+}
+
 REPO="guoyue2010/lxmusic-"
 OUTPUT_DIR="$(pwd)"
 WORK_DIR="$(mktemp -d)"
@@ -38,7 +59,7 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 
 # 1. Fetch latest release metadata from GitHub API.
 echo "Fetching latest release info for ${REPO} ..."
-API_RESPONSE=$(curl -sSL --fail \
+API_RESPONSE=$(curl_with_retry curl -sSL --fail \
     -H "Accept: application/vnd.github+json" \
     "https://api.github.com/repos/${REPO}/releases/latest") || {
     echo "Error: Failed to fetch release info from GitHub API. Keeping existing js files." >&2
@@ -77,7 +98,7 @@ fi
 # 3. Download the zip.
 echo "Downloading zip: $DOWNLOAD_URL"
 ZIP_FILE="${WORK_DIR}/release.zip"
-curl -sSL --fail -o "$ZIP_FILE" "$DOWNLOAD_URL" || {
+curl_with_retry curl -sSL --fail -o "$ZIP_FILE" "$DOWNLOAD_URL" || {
     echo "Error: Failed to download zip. Keeping existing js files." >&2
     exit 1
 }
